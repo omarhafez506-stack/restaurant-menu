@@ -3,77 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منيو مطعم Friends</title>
+    <title>مطعم Friends</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 pb-40">
-    <div class="bg-blue-900 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
+    <div class="bg-red-700 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
         <h1 class="text-2xl font-bold">🍔 مطعم Friends</h1>
-        <p class="text-sm opacity-80">أهلاً بك، اختر وجباتك المفضلة</p>
+        <p class="text-sm opacity-90">دمشق - صحنايا - مقابل كازية نصر</p>
     </div>
-    
-    <div id="products-list" class="p-4 grid grid-cols-1 gap-3"></div>
+
+    <div id="products-list" class="p-4 grid grid-cols-1 gap-3">
+        <p class="text-center text-gray-500 py-10">جاري تحميل الأصناف...</p>
+    </div>
 
     <div class="fixed bottom-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-5px_10px_rgba(0,0,0,0.1)]">
         <div class="mb-3 space-y-2">
             <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 border rounded-lg text-sm">
             <input type="text" id="client-address" placeholder="📍 العنوان بالتفصيل..." class="w-full p-2 border rounded-lg text-sm">
         </div>
-        <button onclick="sendOrder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">
+        <button onclick="sendOrder()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">
             🚀 إرسال الطلب عبر واتساب (المجموع: <span id="cart-total">0</span> ل.س)
         </button>
     </div>
 
     <script>
-        const products = [
-            { id: 1, name: "اسكالوب", price: 320, image: "https://via.placeholder.com/150" },
-            { id: 2, name: "كرانشي", price: 470, image: "https://via.placeholder.com/150" },
-            { id: 3, name: "جوي", price: 470, image: "https://via.placeholder.com/150" },
-            { id: 4, name: "شبح", price: 470, image: "https://via.placeholder.com/150" },
-            { id: 5, name: "برنجي", price: 470, image: "https://via.placeholder.com/150" }
-        ];
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
+        const PHONE = "963955929797";
+        let products = [], cart = {};
 
-        let cart = {};
+        async function init() {
+            try {
+                const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
+                const csv = await res.text();
+                products = csv.split('\n').slice(1).map((row, i) => {
+                    const [name, price, cat, desc, img] = row.split(',');
+                    return { id: i, name, price: parseFloat(price) || 0, img: img?.trim() };
+                }).filter(p => p.name);
+                render();
+            } catch(e) { document.getElementById('products-list').innerHTML = "خطأ في تحميل البيانات!"; }
+        }
 
         function render() {
             document.getElementById('products-list').innerHTML = products.map(p => `
                 <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center justify-between">
-                    <img src="${p.image}" class="w-16 h-16 rounded-lg object-cover">
+                    <img src="${p.img || 'https://via.placeholder.com/150'}" class="w-16 h-16 rounded-lg object-cover">
                     <div class="flex-1 px-3">
                         <h3 class="font-bold text-sm">${p.name}</h3>
-                        <p class="text-blue-600 font-bold text-xs">${p.price} ل.س</p>
+                        <p class="text-red-600 font-bold text-xs">${p.price} ل.س</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="updateQty(${p.id}, -1)" class="w-8 h-8 rounded-full bg-gray-100 font-bold">-</button>
-                        <span id="qty-${p.id}" class="font-bold w-4 text-center">0</span>
-                        <button onclick="updateQty(${p.id}, 1)" class="w-8 h-8 rounded-full bg-blue-500 text-white font-bold">+</button>
+                        <span id="qty-${p.id}" class="font-bold w-6 text-center">0</span>
+                        <button onclick="updateQty(${p.id}, 1)" class="w-8 h-8 rounded-full bg-red-500 text-white font-bold">+</button>
                     </div>
                 </div>
             `).join('');
         }
 
         function updateQty(id, change) {
-            cart[id] = (cart[id] || 0) + change;
-            if(cart[id] < 0) cart[id] = 0;
+            cart[id] = Math.max(0, (cart[id] || 0) + change);
             document.getElementById(`qty-${id}`).innerText = cart[id];
-            calculateTotal();
-        }
-
-        function calculateTotal() {
             let total = 0;
-            products.forEach(p => { if(cart[p.id]) total += (p.price * cart[p.id]); });
+            products.forEach(p => { if(cart[p.id]) total += p.price * cart[p.id]; });
             document.getElementById('cart-total').innerText = total;
         }
 
         function sendOrder() {
             const name = document.getElementById('client-name').value;
             const address = document.getElementById('client-address').value;
-            if(!name || !address) { alert("يرجى كتابة الاسم والعنوان!"); return; }
-            let msg = `*طلب جديد من مطعم Friends* 🍔\n\n👤 الاسم: ${name}\n📍 العنوان: ${address}\n\nالطلبات:\n`;
+            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان!");
+            let msg = `*طلب جديد - مطعم Friends* 🍔\n\n👤 ${name}\n📍 ${address}\n\nالطلبات:\n`;
             products.forEach(p => { if(cart[p.id] > 0) msg += `• ${p.name} (x${cart[p.id]})\n`; });
-            window.open(`https://wa.me/963954573138?text=${encodeURIComponent(msg)}`);
+            window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(msg)}`);
         }
-        render();
+        init();
     </script>
 </body>
 </html>
