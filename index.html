@@ -10,7 +10,7 @@
     <div class="bg-red-700 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
         <h1 class="text-2xl font-bold">🍔 مطعم Friends</h1>
         <p class="text-sm opacity-90">صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم</p>
-        <p class="text-xs mt-1">تلفون: 0116712121 | واتساب: 0955929797</p>
+        <p class="text-xs mt-1">هاتف: 0116712121 | واتساب: 0955929797</p>
     </div>
 
     <div class="sticky top-0 bg-gray-50 z-10 p-4 shadow-sm">
@@ -31,20 +31,22 @@
         let rawProducts = [], cart = {}, currentCat = "الكل";
 
         async function init() {
-            const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
-            const csv = await res.text();
-            rawProducts = csv.split('\n').slice(1).map(row => {
-                const [name, price, cat, desc, img] = row.split(',');
-                return { name, price: parseFloat(price)||0, cat: cat?.trim()||"أخرى", img: img?.trim() };
-            }).filter(p => p.name);
-            renderFilters();
-            render();
+            try {
+                const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
+                const csv = await res.text();
+                rawProducts = csv.split('\n').slice(1).map(row => {
+                    const cols = row.split(',');
+                    return { name: cols[0], price: parseFloat(cols[1])||0, cat: cols[2]?.trim()||"أخرى", desc: cols[3], img: cols[4]?.trim() };
+                }).filter(p => p.name);
+                renderFilters();
+                render();
+            } catch(e) { console.error("Error loading data:", e); }
         }
 
         function renderFilters() {
             const cats = ["الكل", ...new Set(rawProducts.map(p => p.cat))];
             document.getElementById('filters').innerHTML = cats.map(c => 
-                `<button onclick="currentCat='${c}'; render()" class="px-4 py-1 rounded-full ${currentCat==c?'bg-red-600 text-white':'bg-white border'}">${c}</button>`
+                `<button onclick="currentCat='${c}'; render()" class="px-4 py-1 rounded-full whitespace-nowrap ${currentCat==c?'bg-red-600 text-white':'bg-white border'}">${c}</button>`
             ).join('');
         }
 
@@ -52,35 +54,39 @@
             const search = document.getElementById('search').value.toLowerCase();
             const list = rawProducts.filter(p => (currentCat=="الكل" || p.cat==currentCat) && p.name.toLowerCase().includes(search));
             document.getElementById('products-list').innerHTML = list.map((p, i) => `
-                <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center justify-between">
-                    <img src="${p.img}" class="w-16 h-16 rounded-lg object-cover">
-                    <div class="flex-1 px-3">
+                <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center gap-3">
+                    <img src="${p.img}" class="w-20 h-20 rounded-lg object-cover bg-gray-100" onerror="this.src='https://via.placeholder.com/150'">
+                    <div class="flex-1">
                         <h3 class="font-bold text-sm">${p.name}</h3>
-                        <p class="text-red-600 text-xs">${p.price} ل.س</p>
+                        <p class="text-gray-500 text-[10px] my-1">${p.desc || ''}</p>
+                        <p class="text-red-600 font-bold text-xs">${p.price} ل.س</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="updateQty(${i}, -1)" class="w-8 h-8 rounded-full bg-gray-100">-</button>
-                        <span id="qty-${i}" class="font-bold w-6 text-center">0</span>
-                        <button onclick="updateQty(${i}, 1)" class="w-8 h-8 rounded-full bg-red-500 text-white">+</button>
+                        <button onclick="updateQty('${p.name}', -1)" class="w-8 h-8 rounded-full bg-gray-100">-</button>
+                        <span id="qty-${p.name}" class="font-bold w-6 text-center">0</span>
+                        <button onclick="updateQty('${p.name}', 1)" class="w-8 h-8 rounded-full bg-red-500 text-white">+</button>
                     </div>
                 </div>
             `).join('');
+            Object.keys(cart).forEach(name => {
+                if(document.getElementById(`qty-${name}`)) document.getElementById(`qty-${name}`).innerText = cart[name];
+            });
         }
 
-        function updateQty(i, change) {
-            cart[i] = Math.max(0, (cart[i] || 0) + change);
-            document.getElementById(`qty-${i}`).innerText = cart[i];
+        function updateQty(name, change) {
+            cart[name] = Math.max(0, (cart[name] || 0) + change);
+            document.getElementById(`qty-${name}`).innerText = cart[name];
             let total = 0;
-            rawProducts.forEach((p, index) => { if(cart[index]) total += p.price * cart[index]; });
+            rawProducts.forEach(p => { if(cart[p.name]) total += p.price * cart[p.name]; });
             document.getElementById('cart-total').innerText = total;
         }
 
         function sendOrder() {
             const name = document.getElementById('client-name').value;
             const address = document.getElementById('client-address').value;
-            if(!name || !address) return alert("اكتب الاسم والعنوان!");
-            let msg = `*طلب جديد - مطعم Friends*\n👤 ${name}\n📍 ${address}\n\n`;
-            rawProducts.forEach((p, i) => { if(cart[i]>0) msg += `• ${p.name} (x${cart[i]})\n`; });
+            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان!");
+            let msg = `*طلب جديد - مطعم Friends*\n👤 ${name}\n📍 ${address}\n\nالطلبات:\n`;
+            rawProducts.forEach(p => { if(cart[p.name]>0) msg += `• ${p.name} (x${cart[p.name]})\n`; });
             window.open(`https://wa.me/963955929797?text=${encodeURIComponent(msg)}`);
         }
         init();
