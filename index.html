@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منيو الطلبات الذكي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .category-btn.active { background-color: #27ae60; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 pb-32">
+
+    <div class="bg-gray-900 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
+        <h1 class="text-xl font-bold">🍔 طلبات مطعم أبو إلياس</h1>
+    </div>
+
+    <div class="p-4 sticky top-0 bg-gray-50 z-10 shadow-sm">
+        <input type="text" id="search-bar" oninput="renderProducts()" placeholder="🔍 ابحث عن وجبة..." class="w-full p-3 border rounded-xl shadow-sm">
+        <div id="categories-container" class="flex gap-2 overflow-x-auto mt-3 pb-1"></div>
+    </div>
+
+    <div id="products-list" class="px-4 grid grid-cols-1 gap-3">
+        <p class="text-center py-10">جاري تحميل المنيو...</p>
+    </div>
+
+    <script>
+        let products = [];
+        let cart = {};
+        let currentCategory = "كل";
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
+        const restaurantPhone = "963954573138";
+
+        async function init() {
+            try {
+                const response = await fetch(SHEET_CSV_URL + "&t=" + new Date().getTime());
+                const data = await response.text();
+                const rows = data.split('\n').slice(1);
+                products = rows.map((row, index) => {
+                    const [name, price, category, image] = row.split(',');
+                    return { id: index, name: name?.trim(), price: parseFloat(price) || 0, category: category?.trim(), image: image?.trim() };
+                }).filter(p => p.name);
+                renderCategories();
+                renderProducts();
+            } catch (e) { document.getElementById('products-list').innerHTML = "خطأ في تحميل البيانات"; }
+        }
+
+        function renderCategories() {
+            const cats = ["كل", ...new Set(products.map(p => p.category))];
+            document.getElementById('categories-container').innerHTML = cats.map(c => 
+                `<button onclick="filterCategory('${c}')" class="category-btn ${c === currentCategory ? 'active' : ''} px-4 py-1.5 text-sm rounded-full bg-white border shadow-sm">${c}</button>`
+            ).join('');
+        }
+
+        function renderProducts() {
+            const keyword = document.getElementById('search-bar').value.toLowerCase();
+            const list = document.getElementById('products-list');
+            const filtered = products.filter(p => (currentCategory === "كل" || p.category === currentCategory) && p.name.toLowerCase().includes(keyword));
+            list.innerHTML = filtered.map(p => `
+                <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${p.image}" class="w-16 h-16 rounded-lg object-cover bg-gray-100">
+                        <div>
+                            <h3 class="font-bold text-sm">${p.name}</h3>
+                            <p class="text-green-600 font-bold text-xs">${p.price} $</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeQty(${p.id}, -1)" class="w-8 h-8 rounded-full bg-gray-100">-</button>
+                        <span id="qty-${p.id}">0</span>
+                        <button onclick="changeQty(${p.id}, 1)" class="w-8 h-8 rounded-full bg-green-500 text-white">+</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function changeQty(id, change) {
+            if (!cart[id]) cart[id] = { ...products[id], qty: 0 };
+            cart[id].qty = Math.max(0, cart[id].qty + change);
+            if (cart[id].qty === 0) delete cart[id];
+            document.getElementById(`qty-${id}`).innerText = cart[id]?.qty || 0;
+        }
+
+        function filterCategory(cat) { currentCategory = cat; renderCategories(); renderProducts(); }
+        window.onload = init;
+    </script>
+</body>
+</html>
