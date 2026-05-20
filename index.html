@@ -9,72 +9,79 @@
 <body class="bg-gray-50 text-gray-800 pb-40">
     <div class="bg-red-700 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
         <h1 class="text-2xl font-bold">🍔 مطعم Friends</h1>
-        <p class="text-sm opacity-90">دمشق - صحنايا - مقابل كازية نصر</p>
+        <p class="text-sm opacity-90">صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم</p>
+        <p class="text-xs mt-1">تلفون: 0116712121 | واتساب: 0955929797</p>
     </div>
 
-    <div id="products-list" class="p-4 grid grid-cols-1 gap-3">
-        <p class="text-center text-gray-500 py-10">جاري تحميل الأصناف...</p>
+    <div class="sticky top-0 bg-gray-50 z-10 p-4 shadow-sm">
+        <input type="text" id="search" oninput="render()" placeholder="🔍 ابحث عن وجبة..." class="w-full p-3 rounded-xl border border-gray-200 mb-3">
+        <div id="filters" class="flex gap-2 overflow-x-auto pb-2"></div>
     </div>
+
+    <div id="products-list" class="p-4 grid grid-cols-1 gap-3"></div>
 
     <div class="fixed bottom-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-5px_10px_rgba(0,0,0,0.1)]">
-        <div class="mb-3 space-y-2">
-            <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 border rounded-lg text-sm">
-            <input type="text" id="client-address" placeholder="📍 العنوان بالتفصيل..." class="w-full p-2 border rounded-lg text-sm">
-        </div>
-        <button onclick="sendOrder()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">
-            🚀 إرسال الطلب عبر واتساب (المجموع: <span id="cart-total">0</span> ل.س)
-        </button>
+        <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 mb-1 border rounded-lg text-sm">
+        <input type="text" id="client-address" placeholder="📍 العنوان..." class="w-full p-2 mb-2 border rounded-lg text-sm">
+        <button onclick="sendOrder()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl">🚀 إرسال الطلب (<span id="cart-total">0</span> ل.س)</button>
     </div>
 
     <script>
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
-        const PHONE = "963955929797";
-        let products = [], cart = {};
+        let rawProducts = [], cart = {}, currentCat = "الكل";
 
         async function init() {
-            try {
-                const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
-                const csv = await res.text();
-                products = csv.split('\n').slice(1).map((row, i) => {
-                    const [name, price, cat, desc, img] = row.split(',');
-                    return { id: i, name, price: parseFloat(price) || 0, img: img?.trim() };
-                }).filter(p => p.name);
-                render();
-            } catch(e) { document.getElementById('products-list').innerHTML = "خطأ في تحميل البيانات!"; }
+            const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
+            const csv = await res.text();
+            rawProducts = csv.split('\n').slice(1).map(row => {
+                const [name, price, cat, desc, img] = row.split(',');
+                return { name, price: parseFloat(price)||0, cat: cat?.trim()||"أخرى", img: img?.trim() };
+            }).filter(p => p.name);
+            renderFilters();
+            render();
+        }
+
+        function renderFilters() {
+            const cats = ["الكل", ...new Set(rawProducts.map(p => p.cat))];
+            document.getElementById('filters').innerHTML = cats.map(c => 
+                `<button onclick="currentCat='${c}'; render()" class="px-4 py-1 rounded-full ${currentCat==c?'bg-red-600 text-white':'bg-white border'}">${c}</button>`
+            ).join('');
         }
 
         function render() {
-            document.getElementById('products-list').innerHTML = products.map(p => `
+            const search = document.getElementById('search').value.toLowerCase();
+            const list = rawProducts.filter(p => (currentCat=="الكل" || p.cat==currentCat) && p.name.toLowerCase().includes(search));
+            document.getElementById('products-list').innerHTML = list.map((p, i) => `
                 <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center justify-between">
-                    <img src="${p.img || 'https://via.placeholder.com/150'}" class="w-16 h-16 rounded-lg object-cover">
+                    <img src="${p.img}" class="w-16 h-16 rounded-lg object-cover">
                     <div class="flex-1 px-3">
                         <h3 class="font-bold text-sm">${p.name}</h3>
-                        <p class="text-red-600 font-bold text-xs">${p.price} ل.س</p>
+                        <p class="text-red-600 text-xs">${p.price} ل.س</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="updateQty(${p.id}, -1)" class="w-8 h-8 rounded-full bg-gray-100 font-bold">-</button>
-                        <span id="qty-${p.id}" class="font-bold w-6 text-center">0</span>
-                        <button onclick="updateQty(${p.id}, 1)" class="w-8 h-8 rounded-full bg-red-500 text-white font-bold">+</button>
+                        <button onclick="updateQty(${i}, -1)" class="w-8 h-8 rounded-full bg-gray-100">-</button>
+                        <span id="qty-${i}" class="font-bold w-6 text-center">0</span>
+                        <button onclick="updateQty(${i}, 1)" class="w-8 h-8 rounded-full bg-red-500 text-white">+</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function updateQty(id, change) {
-            cart[id] = Math.max(0, (cart[id] || 0) + change);
-            document.getElementById(`qty-${id}`).innerText = cart[id];
+        function updateQty(i, change) {
+            cart[i] = Math.max(0, (cart[i] || 0) + change);
+            document.getElementById(`qty-${i}`).innerText = cart[i];
             let total = 0;
-            products.forEach(p => { if(cart[p.id]) total += p.price * cart[p.id]; });
+            rawProducts.forEach((p, index) => { if(cart[index]) total += p.price * cart[index]; });
             document.getElementById('cart-total').innerText = total;
         }
 
         function sendOrder() {
             const name = document.getElementById('client-name').value;
             const address = document.getElementById('client-address').value;
-            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان!");
-            let msg = `*طلب جديد - مطعم Friends* 🍔\n\n👤 ${name}\n📍 ${address}\n\nالطلبات:\n`;
-            products.forEach(p => { if(cart[p.id] > 0) msg += `• ${p.name} (x${cart[p.id]})\n`; });
-            window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(msg)}`);
+            if(!name || !address) return alert("اكتب الاسم والعنوان!");
+            let msg = `*طلب جديد - مطعم Friends*\n👤 ${name}\n📍 ${address}\n\n`;
+            rawProducts.forEach((p, i) => { if(cart[i]>0) msg += `• ${p.name} (x${cart[i]})\n`; });
+            window.open(`https://wa.me/963955929797?text=${encodeURIComponent(msg)}`);
         }
         init();
     </script>
