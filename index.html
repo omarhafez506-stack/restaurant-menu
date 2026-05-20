@@ -34,13 +34,15 @@
             try {
                 const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
                 const csv = await res.text();
+                // نستخدم التعبير النمطي للتعامل مع الفواصل داخل الوصف
                 rawProducts = csv.split('\n').slice(1).map(row => {
-                    const cols = row.split(',');
-                    return { name: cols[0], price: parseFloat(cols[1])||0, cat: cols[2]?.trim()||"أخرى", desc: cols[3], img: cols[4]?.trim() };
+                    const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
+                    const cols = row.match(regex)?.map(c => c.replace(/"/g, '')) || [];
+                    return { name: cols[0], price: parseFloat(cols[1])||0, cat: cols[2]||"أخرى", desc: cols[3]||'', img: cols[4]||'' };
                 }).filter(p => p.name);
                 renderFilters();
                 render();
-            } catch(e) { console.error("Error loading data:", e); }
+            } catch(e) { console.error(e); }
         }
 
         function renderFilters() {
@@ -58,7 +60,7 @@
                     <img src="${p.img}" class="w-20 h-20 rounded-lg object-cover bg-gray-100" onerror="this.src='https://via.placeholder.com/150'">
                     <div class="flex-1">
                         <h3 class="font-bold text-sm">${p.name}</h3>
-                        <p class="text-gray-500 text-[10px] my-1">${p.desc || ''}</p>
+                        <p class="text-gray-500 text-[10px] my-1">${p.desc}</p>
                         <p class="text-red-600 font-bold text-xs">${p.price} ل.س</p>
                     </div>
                     <div class="flex items-center gap-2">
