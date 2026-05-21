@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 pb-40">
+    
     <div class="bg-red-700 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
         <h1 class="text-2xl font-bold">🍔 مطعم Friends</h1>
         <p class="text-sm opacity-90">صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم</p>
@@ -14,16 +15,16 @@
     </div>
 
     <div class="sticky top-0 bg-gray-50 z-10 p-4 shadow-sm">
-        <input type="text" id="search" oninput="render()" placeholder="🔍 ابحث عن وجبة..." class="w-full p-3 rounded-xl border border-gray-200 mb-3">
+        <input type="text" id="search" oninput="render()" placeholder="🔍 ابحث عن وجبة..." class="w-full p-3 rounded-xl border border-gray-200 mb-3 focus:outline-none focus:ring-2 focus:ring-red-500">
         <div id="filters" class="flex gap-2 overflow-x-auto pb-2"></div>
     </div>
 
     <div id="products-list" class="p-4 grid grid-cols-1 gap-3"></div>
 
-    <div class="fixed bottom-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-5px_10px_rgba(0,0,0,0.1)]">
-        <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 mb-1 border rounded-lg text-sm">
-        <input type="text" id="client-address" placeholder="📍 العنوان..." class="w-full p-2 mb-2 border rounded-lg text-sm">
-        <button onclick="sendOrder()" class="w-full bg-red-600 text-white font-bold py-3 rounded-xl">🚀 إرسال الطلب (<span id="cart-total">0</span> ل.س)</button>
+    <div class="fixed bottom-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-5px_10px_rgba(0,0,0,0.1)] z-20">
+        <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 mb-1 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+        <input type="text" id="client-address" placeholder="📍 العنوان بالتفصيل..." class="w-full p-2 mb-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
+        <button onclick="sendOrder()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md">🚀 إرسال الطلب عبر الواتساب (<span id="cart-total">0</span> ل.س)</button>
     </div>
 
     <script>
@@ -34,63 +35,109 @@
             try {
                 const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
                 const csv = await res.text();
-                // نستخدم التعبير النمطي للتعامل مع الفواصل داخل الوصف
-                rawProducts = csv.split('\n').slice(1).map(row => {
+                
+                rawProducts = csv.split('\n').slice(1).map((row, index) => {
                     const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
-                    const cols = row.match(regex)?.map(c => c.replace(/"/g, '')) || [];
-                    return { name: cols[0], price: parseFloat(cols[1])||0, cat: cols[2]||"أخرى", desc: cols[3]||'', img: cols[4]||'' };
+                    const cols = row.match(regex)?.map(c => c.replace(/"/g, '').trim()) || [];
+                    return { 
+                        id: index,
+                        name: cols[0], 
+                        price: parseFloat(cols[1]) || 0, 
+                        cat: cols[2] || "أخرى", 
+                        desc: cols[3] || '', 
+                        img: cols[4] || '' 
+                    };
                 }).filter(p => p.name);
+                
                 renderFilters();
                 render();
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.error("خطأ في تحميل البيانات: ", e); 
+            }
         }
 
         function renderFilters() {
             const cats = ["الكل", ...new Set(rawProducts.map(p => p.cat))];
             document.getElementById('filters').innerHTML = cats.map(c => 
-                `<button onclick="currentCat='${c}'; render()" class="px-4 py-1 rounded-full whitespace-nowrap ${currentCat==c?'bg-red-600 text-white':'bg-white border'}">${c}</button>`
+                `<button onclick="currentCat='${c}'; renderFilters(); render()" class="px-4 py-1 rounded-full whitespace-nowrap transition duration-200 ${currentCat==c?'bg-red-600 text-white shadow-sm':'bg-white border text-gray-600'}">${c}</button>`
             ).join('');
         }
 
         function render() {
             const search = document.getElementById('search').value.toLowerCase();
             const list = rawProducts.filter(p => (currentCat=="الكل" || p.cat==currentCat) && p.name.toLowerCase().includes(search));
-            document.getElementById('products-list').innerHTML = list.map((p, i) => `
-                <div class="bg-white p-3 rounded-xl shadow-sm border flex items-center gap-3">
+            
+            document.getElementById('products-list').innerHTML = list.map((p) => {
+                const currentQty = cart[p.name] || 0;
+                return `
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
                     <img src="${p.img}" class="w-20 h-20 rounded-lg object-cover bg-gray-100" onerror="this.src='https://via.placeholder.com/150'">
                     <div class="flex-1">
-                        <h3 class="font-bold text-sm">${p.name}</h3>
-                        <p class="text-gray-500 text-[10px] my-1">${p.desc}</p>
-                        <p class="text-red-600 font-bold text-xs">${p.price} ل.س</p>
+                        <h3 class="font-bold text-sm text-gray-900">${p.name}</h3>
+                        <p class="text-gray-500 text-[11px] my-1 leading-tight">${p.desc}</p>
+                        <p class="text-red-600 font-bold text-sm">${p.price.toLocaleString()} <span class="text-[10px]">ل.س</span></p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="updateQty('${p.name}', -1)" class="w-8 h-8 rounded-full bg-gray-100">-</button>
-                        <span id="qty-${p.name}" class="font-bold w-6 text-center">0</span>
-                        <button onclick="updateQty('${p.name}', 1)" class="w-8 h-8 rounded-full bg-red-500 text-white">+</button>
+                        <button onclick="updateQty('${p.name}', -1)" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-lg flex items-center justify-center text-gray-600">-</button>
+                        <span id="qty-${p.id}" class="font-bold w-6 text-center text-sm">${currentQty}</span>
+                        <button onclick="updateQty('${p.name}', 1)" class="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold text-lg flex items-center justify-center">+</button>
                     </div>
                 </div>
-            `).join('');
-            Object.keys(cart).forEach(name => {
-                if(document.getElementById(`qty-${name}`)) document.getElementById(`qty-${name}`).innerText = cart[name];
-            });
+            `}).join('');
         }
 
         function updateQty(name, change) {
             cart[name] = Math.max(0, (cart[name] || 0) + change);
-            document.getElementById(`qty-${name}`).innerText = cart[name];
+            
+            // تحديث الرقم على الشاشة فقط إذا كان العنصر معروضاً حالياً
+            const product = rawProducts.find(p => p.name === name);
+            if (product) {
+                const qtyElement = document.getElementById(`qty-${product.id}`);
+                if (qtyElement) {
+                    qtyElement.innerText = cart[name];
+                }
+            }
+            
+            // حساب المجموع الكلي الجديد
             let total = 0;
-            rawProducts.forEach(p => { if(cart[p.name]) total += p.price * cart[p.name]; });
-            document.getElementById('cart-total').innerText = total;
+            rawProducts.forEach(p => { 
+                if(cart[p.name]) total += p.price * cart[p.name]; 
+            });
+            document.getElementById('cart-total').innerText = total.toLocaleString();
         }
 
         function sendOrder() {
-            const name = document.getElementById('client-name').value;
-            const address = document.getElementById('client-address').value;
-            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان!");
-            let msg = `*طلب جديد - مطعم Friends*\n👤 ${name}\n📍 ${address}\n\nالطلبات:\n`;
-            rawProducts.forEach(p => { if(cart[p.name]>0) msg += `• ${p.name} (x${cart[p.name]})\n`; });
+            const name = document.getElementById('client-name').value.trim();
+            const address = document.getElementById('client-address').value.trim();
+            
+            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان بالكامل لتوصيل الطلب!");
+            
+            let hasItems = false;
+            let msg = `*طلب جديد من المنيو الإلكتروني 📱*\n`;
+            msg += `─────────────────\n`;
+            msg += `👤 *الزبون:* ${name}\n`;
+            msg += `📍 *العنوان:* ${address}\n`;
+            msg += `─────────────────\n\n`;
+            msg += `🛒 *الطلبات:* \n`;
+            
+            let total = 0;
+            rawProducts.forEach(p => { 
+                if(cart[p.name] > 0) {
+                    hasItems = true;
+                    const itemTotal = p.price * cart[p.name];
+                    total += itemTotal;
+                    msg += `• ${p.name}\n  ${cart[p.name]} × ${p.price.toLocaleString()} = *${itemTotal.toLocaleString()} ل.س*\n\n`;
+                } 
+            });
+            
+            if(!hasItems) return alert("سلتك فارغة! يرجى إضافة وجبات أولاً.");
+            
+            msg += `─────────────────\n`;
+            msg += `💰 *الحساب الإجمالي:* *${total.toLocaleString()} ل.س*`;
+            
             window.open(`https://wa.me/963955929797?text=${encodeURIComponent(msg)}`);
         }
+        
         init();
     </script>
 </body>
