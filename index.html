@@ -1,986 +1,1169 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect, useMemo, useRef, ChangeEvent, FormEvent } from 'react';
-import { 
-  Search, 
-  ShoppingBag, 
-  MapPin, 
-  User, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Phone, 
-  Utensils, 
-  Check, 
-  Loader2, 
-  Wifi, 
-  WifiOff, 
-  AlertCircle, 
-  X, 
-  MessageSquare,
-  Clock
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Product, Cart, OrderDetails } from './types';
-import { FALLBACK_PRODUCTS } from './data/fallbackData';
-
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
-const WHATSAPP_NUMBER = "963955929797";
-const RESTAURANT_PHONE = "0116712121";
-
-// Custom CSV Parser that handles double quotes, commas within quotes, empty fields, and preserves all columns precisely
-function parseCSV(text: string): string[][] {
-  const lines: string[][] = [];
-  const rows = text.split(/\r?\n/);
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مطعم Friends صحنايا - المنيو الإلكتروني التفاعلي</title>
   
-  for (const row of rows) {
-    if (!row.trim()) continue;
-    
-    const cols: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < row.length; i++) {
-      const char = row[i];
-      if (char === '"') {
-        if (inQuotes && row[i + 1] === '"') {
-          current += '"';
-          i++; // skip next escaped quote
-        } else {
-          inQuotes = !inQuotes;
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Custom Tailwind Config for Fonts and Themes -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            red: {
+              650: '#dd1c1c',
+            }
+          }
         }
-      } else if (char === ',' && !inQuotes) {
-        cols.push(current.trim());
-        current = '';
-      } else {
-        current += char;
       }
     }
-    cols.push(current.trim());
-    lines.push(cols);
-  }
-  
-  return lines;
-}
+  </script>
 
-export default function App() {
-  // Application States
-  const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<Cart>(() => {
-    const savedCart = localStorage.getItem('friends_cart');
-    return savedCart ? JSON.parse(savedCart) : {};
-  });
-  const [currentCat, setCurrentCat] = useState<string>("الكل");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [dataSource, setDataSource] = useState<"sheets" | "cache" | "fallback">("fallback");
-  const [lastFetched, setLastFetched] = useState<string | null>(null);
-  
-  // Checkout & Order Form
-  const [orderDetails, setOrderDetails] = useState<OrderDetails>(() => {
-    const savedDetails = localStorage.getItem('friends_order_details');
-    return savedDetails ? JSON.parse(savedDetails) : { name: "", address: "", phone: "", notes: "" };
-  });
+  <!-- Google Font Cairo for elegant Arabic Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-  // UI Control states
-  const [showCartDrawer, setShowCartDrawer] = useState<boolean>(false);
-  const [orderSent, setOrderSent] = useState<boolean>(false);
-  const [imageErrors, setImageErrors] = useState<Record<string | number, boolean>>({});
-  
-  const bottomFormRef = useRef<HTMLDivElement>(null);
+  <style>
+    /* Custom Scrollbar for modern list views */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    /* Animation classes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    
+    /* Extra spacing adjustments */
+    body {
+      background-color: #f8fafc;
+      font-family: 'Cairo', sans-serif;
+    }
+    
+    /* Category scroll hide utilities */
+    .hide-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col pb-24 antialiased">
 
-  // Sync cart & user details to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('friends_cart', JSON.stringify(cart));
-  }, [cart]);
+  <!-- Upper Status Bar - Real-time Network Indicator -->
+  <div id="status-bar" class="bg-slate-900 text-[11px] text-slate-400 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 font-mono">
+    <div class="flex items-center gap-1.5">
+      <span id="network-indicator" class="flex items-center gap-1 text-sky-400">
+        <!-- SVG Wifi off (Default state during loading) -->
+        <svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <span id="connection-text">جاري الاتصال بقاعدة البيانات...</span>
+      </span>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <span id="last-update-wrapper" class="hidden">آخر تحديث: <span id="last-update-time" class="font-bold">-</span></span>
+      <button onclick="handleManualRefresh()" id="refresh-btn" class="text-white hover:text-red-400 transition flex items-center gap-1 text-[11px] select-none cursor-pointer">
+        <span>🔁 تحديث يدوي</span>
+      </button>
+    </div>
+  </div>
 
-  useEffect(() => {
-    localStorage.setItem('friends_order_details', JSON.stringify(orderDetails));
-  }, [orderDetails]);
+  <!-- Hero Presentation Header -->
+  <header class="relative overflow-hidden bg-gradient-to-b from-red-800 to-red-650 text-white shadow-md pt-8 pb-10 px-4">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-red-900/40 rounded-full -ml-16 -mb-16 blur-xl pointer-events-none"></div>
 
-  // Load Menu Dataset
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
+    <div class="max-w-4xl mx-auto text-center relative z-10">
+      <div class="inline-flex p-3 bg-white/10 backdrop-blur-md rounded-2xl mb-4 border border-white/20 shadow-inner">
+        <span class="text-4xl">🍔</span>
+      </div>
+      
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
+        مطعم Friends صحنايا
+      </h1>
+      
+      <p class="text-red-100 text-sm max-w-lg mx-auto leading-relaxed mb-4 font-light">
+        صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم
+      </p>
+      
+      <div class="flex justify-center flex-wrap gap-2.5 mt-2">
+        <a href="tel:0116712121" class="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition text-xs font-semibold flex items-center gap-1.5 border border-white/10 hover:scale-[1.02]">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+          <span>اتصل بنا: 0116712121</span>
+        </a>
+        
+        <div class="px-3.5 py-1.5 rounded-full bg-red-900/50 text-xs flex items-center gap-1.5 border border-red-800/30">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>التوصيل مجاني لجميع مناطق صحنايا 🤩</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 w-full flex-1 flex flex-col md:flex-row gap-6 mt-6">
+    
+    <!-- Left Menu Content Section (Products & Filters) -->
+    <div class="flex-1 min-w-0">
+      
+      <!-- Sticky Search Bar & Category Scroller -->
+      <div class="sticky top-0 bg-slate-50/90 backdrop-blur-md pt-2 pb-4 z-20 space-y-3.5">
+        
+        <!-- Search Box -->
+        <div class="relative max-w-lg mx-auto md:mx-0">
+          <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input 
+            type="text" 
+            id="search-input" 
+            oninput="handleSearch(this.value)"
+            placeholder="ابحث عن وجبة، برجر، كريسبي، بطاطا..." 
+            class="w-full pl-4 pr-11 py-3 bg-white text-slate-900 text-sm rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition shadow-sm"
+          >
+          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 hover:text-slate-600 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Categories Slider Box -->
+        <div class="relative">
+          <div id="category-scroller" class="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 hide-scrollbar scroll-smooth">
+            <!-- Dynamically populated categories -->
+            <div class="px-4 py-8 text-center text-xs text-slate-400">جاري الترتيب...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meal Cards Grid Section -->
+      <div id="loading-spinner" class="py-24 text-center">
+        <div class="inline-block w-8 h-8 border-4 border-red-650 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-slate-500 text-sm mt-3.5 font-medium">جاري تحديث وجبات فريندز الفاخرة...</p>
+      </div>
+
+      <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
+        <!-- Dynamically injected meal cards -->
+      </div>
+      
+      <!-- Empty State View -->
+      <div id="empty-state" class="hidden py-16 px-4 bg-white rounded-3xl border border-slate-100 text-center flex flex-col items-center">
+        <span class="text-4xl mb-3">🥪</span>
+        <h3 class="font-bold text-slate-800 mb-1">لم نجد ما تبحث عنه بالمنيو!</h3>
+        <p class="text-slate-500 text-xs">جرب البحث بكلمة أخرى مثل 'شاورما' أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
+        <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition cursor-pointer select-none">
+          عرض كل الوجبات
+        </button>
+      </div>
+    </div>
+
+    <!-- Right Calculations & Order Invoice Voucher (Sidebar on Desktop) -->
+    <div class="w-full md:w-80 lg:w-96 flex-shrink-0">
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-4.5 shadow-sm sticky top-4">
+        
+        <!-- Upper Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
+          <h2 class="font-bold text-[16px] text-slate-800 flex items-center gap-2 select-none">
+            <svg class="w-4.5 h-4.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span>فاتورة طلباتك التفاعلية</span>
+          </h2>
+          <button onclick="clearCart()" id="clear-cart-btn" class="hidden text-[11px] text-slate-400 hover:text-red-650 font-semibold flex items-center gap-0.5 cursor-pointer select-none">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>تصفير الفاتورة</span>
+          </button>
+        </div>
+
+        <!-- Invoice Cart Body -->
+        <div id="invoice-cart-empty" class="py-8 text-center flex flex-col items-center justify-center">
+          <div class="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-3 border border-dashed border-slate-200">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          </div>
+          <p class="text-slate-600 font-medium text-xs">سلتك لا تزال فارغة حاليًا</p>
+          <p class="text-slate-400 text-[10px] mt-1 max-w-[180px] mx-auto leading-relaxed">
+            تصفح المنيو بالأعلى وأضف وجباتك المفضلة وسنقوم بتجهيز الحساب فوراً تلقائياً!
+          </p>
+        </div>
+
+        <div id="invoice-cart-full" class="hidden space-y-4">
+          <!-- Live Item Lineups -->
+          <div id="invoice-items" class="space-y-2.5 max-h-56 overflow-y-auto pl-1">
+            <!-- Dynamically injected order rows -->
+          </div>
+
+          <!-- Total Arithmetic Outputs -->
+          <div class="border-t border-slate-100 pt-3.5 space-y-2">
+            <div class="flex justify-between text-xs text-slate-500 font-medium">
+              <span>عدد الوجبات الكلية:</span>
+              <span id="invoice-total-count" class="font-mono text-slate-800 font-bold">0</span>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500 font-medium">
+              <span>تكلفة التوصيل (صحنايا):</span>
+              <span class="text-emerald-600 font-bold flex items-center gap-1 select-none">
+                <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold">مجاني بالكامل 🤩</span>
+                <span>0 ل.س</span>
+              </span>
+            </div>
+            <div class="flex justify-between text-sm text-slate-900 font-extrabold border-t border-dashed border-slate-200 pt-3.5 mt-2">
+              <span class="text-slate-800">الحساب الإجمالي الكلي:</span>
+              <span class="font-mono text-red-600 text-base" id="invoice-total-price">0 ل.س</span>
+            </div>
+          </div>
+
+          <!-- Checkout Details Fields Box -->
+          <form id="checkout-form" onsubmit="handleSendOrder(event)" class="border-t border-slate-100 pt-4 space-y-3">
+            <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+              <span>تفاصيل توصيل الزبون:</span>
+            </h3>
+
+            <div>
+              <input 
+                type="text" 
+                id="form-name" 
+                required
+                placeholder="👤 اسم الزبون الكامل..." 
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+              >
+            </div>
+
+            <div>
+              <input 
+                type="text" 
+                id="form-address" 
+                required
+                placeholder="📍 العنوان بدقة (الشارع، معالم قريبة)..." 
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+              >
+            </div>
+
+            <div>
+              <input 
+                type="tel" 
+                id="form-phone" 
+                placeholder="📞 رقم الهاتف للاتصال بك (اختياري)..." 
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+              >
+            </div>
+
+            <div>
+              <textarea 
+                id="form-notes" 
+                rows="2"
+                placeholder="📝 أي ملاحظات؟ (إضافة ثوم، بدون بصل، الخ)..." 
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
+              ></textarea>
+            </div>
+
+            <button 
+              type="submit" 
+              className="relative overflow-hidden cursor-pointer"
+              class="w-full bg-red-650 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 select-none"
+            >
+              <span id="btn-submit-text">🚀 إرسال الفاتورة عبر الواتساب</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Mobile Sticky Navigation Drawer -->
+  <div id="mobile-sticky-dock" class="hidden md:hidden fixed bottom-4 inset-x-4 bg-slate-900/95 backdrop-blur-lg text-white p-3.5 rounded-2xl shadow-xl border border-slate-800 z-40 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="relative p-2 bg-red-600 rounded-xl">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        <span id="mobile-dock-badge" class="absolute -top-1.5 -right-1.5 bg-white text-slate-900 font-mono font-extrabold text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center">0</span>
+      </div>
+      <div>
+        <p class="text-[10px] text-slate-400 font-light leading-none">مجموع طلباتك</p>
+        <p class="font-mono font-bold text-sm tracking-tight mt-0.5" id="mobile-dock-price">0 ل.س</p>
+      </div>
+    </div>
+
+    <button onclick="scrollToCheckoutForm()" class="bg-red-650 hover:bg-red-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-sm select-none cursor-pointer">
+      عرض الفاتورة وإرسال الطلب
+    </button>
+  </div>
+
+  <!-- Portable Interactive Modal Drawer for Mobile Detailed Checkouts -->
+  <div id="mobile-drawer-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-end justify-center">
+    <div id="mobile-drawer-content" class="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto p-4 flex flex-col border-t border-slate-200 transition-transform duration-300 translate-y-full">
+      
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+        <div class="flex items-center gap-1.5">
+          <h2 class="font-bold text-base text-slate-900">سلة طلباتك الشهية</h2>
+          <span id="mobile-drawer-count-badge" class="bg-red-100 text-red-700 text-xs font-extrabold font-mono px-2 py-0.5 rounded-full">0 وجبات</span>
+        </div>
+        <button onclick="closeMobileDrawer()" class="p-1 px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full text-xs font-bold flex items-center gap-1 select-none cursor-pointer">
+          <span>إغلاق الملحق</span>
+        </button>
+      </div>
+
+      <!-- Drawer Content Wrapper -->
+      <div class="flex-1 flex flex-col space-y-4">
+        <!-- Scrollable Order Lists -->
+        <div id="mobile-drawer-items" class="space-y-2.5 max-h-48 overflow-y-auto pl-1"></div>
+
+        <!-- Math calculations summary -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-2 text-xs">
+          <div class="flex justify-between text-slate-600">
+            <span>تكلفة وجبات الطعام:</span>
+            <span id="mobile-drawer-items-cost" class="font-mono font-bold text-slate-900">0 ل.س</span>
+          </div>
+          <div class="flex justify-between text-slate-600">
+            <span>خدمة التوصيل بصحنايا:</span>
+            <span class="text-emerald-650 font-bold select-none text-[11px]">مجاني بالكامل 🎉</span>
+          </div>
+          <div class="flex justify-between text-slate-900 font-bold text-sm border-t border-slate-200/60 pt-2 mt-1">
+            <span>الحساب الإجمالي الكلي:</span>
+            <span id="mobile-drawer-total-cost" class="font-mono text-red-600 text-base">0 ل.س</span>
+          </div>
+        </div>
+
+        <!-- Customer address confirmation inside mobile drawer -->
+        <form id="mobile-drawer-form" onsubmit="handleSendOrder(event, true)" class="space-y-3 pt-2">
+          <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>معلومات الزبون لمندوب التوصيل:</span>
+          </h3>
+
+          <input 
+            type="text" 
+            id="mob-form-name" 
+            required 
+            placeholder="👤 اسمك الكريم بالكامل..." 
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+          >
+
+          <input 
+            type="text" 
+            id="mob-form-address" 
+            required 
+            placeholder="📍 العنوان بدقة (الحارة، البناية، علامة قريبة)..." 
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+          >
+
+          <input 
+            type="tel" 
+            id="mob-form-phone" 
+            placeholder="📞 رقم الموبايل للاتصال بك (اختياري)..." 
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+          >
+
+          <textarea 
+            id="mob-form-notes" 
+            rows="2" 
+            placeholder="📝 هل لديك أي ملحوظات؟ (زيادة بصل، تخفيف توم، الخ...)" 
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20 resize-none"
+          ></textarea>
+
+          <button 
+            type="submit" 
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition active:scale-[0.98] flex items-center justify-center gap-2 select-none cursor-pointer"
+          >
+            <span>🚀 تثبيت وإرسال الطلب للواتساب</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer Branding -->
+  <footer class="mt-auto py-8 bg-slate-950 text-center text-slate-500 border-t border-slate-900 px-4 text-xs">
+    <p class="font-semibold text-slate-400">🍔 مطعم Friends صحنايا</p>
+    <p class="mt-1 font-light text-[11px] text-slate-600 leading-relaxed max-w-md mx-auto">
+      المنيو الإلكتروني التفاعلي للطلب الفوري. نخدم أهالي صحنايا الحبيبة بكل فخر. نوصل طلبكم ساخناً مقرمشاً بدقة حسابات 100%.
+    </p>
+    <div class="flex justify-center items-center gap-1.5 text-[9px] text-slate-700 font-mono mt-4">
+      <span>FRIENDS_V2_SINGLEFILE</span>
+      <span>•</span>
+      <span>STABLE_ARITHMETIC_PRECISION</span>
+    </div>
+  </footer>
+
+  <!-- Code Logic Block containing the spreadsheet integration, custom calculation fixes, and UI interaction -->
+  <script>
+    // Configuration Settings
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
+    const WHATSAPP_NUMBER = "963955929797";
+
+    // Standard high-quality offline fallback dataset
+    const FALLBACK_PRODUCTS = [
+      {
+        id: "f1",
+        name: "سوبر شاورما دجاج (صاج)",
+        price: 47000,
+        cat: "شاورما",
+        desc: "شاورما دجاج بخبز الصاج المميز مع المايونيز والبطاطا الإضافية والخلطة السرية",
+        img: "https://images.unsplash.com/photo-1561651823-34feb02250e4?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f2",
+        name: "سندويش شاورما عادي دبل",
+        price: 35000,
+        cat: "شاورما",
+        desc: "قطع شاورما ملفوفة بخبز الصاج مع كريم الثوم والمخلل اللذيذ",
+        img: "https://images.unsplash.com/photo-1626700051175-6518c4793f0b?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f3",
+        name: "وجبة شاورما عربي دبل مميز",
+        price: 85000,
+        cat: "شاورما",
+        desc: "سندويشتين شاورما صاج مقطعة تقدم مع صحن بطاطا، كريم ثوم، مخلل، وسيرفيس كامل",
+        img: "https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f4",
+        name: "شير كريسبي زنجر عائلي (5 قطع)",
+        price: 125000,
+        cat: "بروستد و كريسبي",
+        desc: "5 قطع من صدر الدجاج المقرمش بتتبيلة فريندز المميزة مع بطاطا، ثومية، مخلل، وخبز",
+        img: "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f5",
+        name: "نصف فروج بروستد فريندز",
+        price: 120000,
+        cat: "بروستد و كريسبي",
+        desc: "نصف فروج بروستد مقرمش (4 قطع) مجهز بأحدث الطرق، يقدم مع بطاطا، كريم الثوم والخبز الساخن",
+        img: "https://images.unsplash.com/photo-1627662236973-4f8259fa2441?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f6",
+        name: "برجر بريموم تشيز دبل لارج",
+        price: 55000,
+        cat: "سندويش وبرجر",
+        desc: "قرص لحم بقر غني مع جبنة الشيدر الذائبة، خس، طماطم، صلصة برجر فريندز الخاصة وصوص خاص",
+        img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f7",
+        name: "سندويش كريسبي حار رويال",
+        price: 42000,
+        cat: "سندويش وبرجر",
+        desc: "قطع دجاج كريسبي حار مع جبنة شيدر، مرتديلا، مايونيز وخس طازج",
+        img: "https://images.unsplash.com/photo-1610614819513-58e34989848b?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f8",
+        name: "صحن بطاطا مقلية عائلي مقرمش",
+        price: 25000,
+        cat: "مقبلات ومشروبات",
+        desc: "أصابع بطاطا مقلية ذهبية ومقرمشة مع تشكيلة بهارات فريندز الشهية",
+        img: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f9",
+        name: "كريم ثوم كولد كريمي فريندز",
+        price: 10000,
+        cat: "مقبلات ومشروبات",
+        desc: "ثومية غنية وناعمة مجهزة يومياً لتناسب وجباتكم",
+        img: "https://images.unsplash.com/photo-1571263713941-1748802b811e?auto=format&fit=crop&w=300&q=50&fm=webp"
+      },
+      {
+        id: "f10",
+        name: "علبة كوكاكولا باردة منعشة",
+        price: 12000,
+        cat: "مقبلات ومشروبات",
+        desc: "كان كولا منعش وبارد للشعور بالانتعاش مع الطعام",
+        img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=300&q=50&fm=webp"
+      }
+    ];
+
+    // Reactive State Engine
+    let products = [];
+    let cart = {}; // key: product name, value: count
+    let currentCategory = "الكل";
+    let searchQuery = "";
+    let customerDetails = { name: "", address: "", phone: "", notes: "" };
+
+    // Standard stable CSV parser matching App.tsx perfectly
+    function parseCSV(text) {
+      const lines = [];
+      const rows = text.split(/\r?\n/);
+      
+      for (const row of rows) {
+        if (!row.trim()) continue;
+        
+        const cols = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < row.length; i++) {
+          const char = row[i];
+          if (char === '"') {
+            if (inQuotes && row[i + 1] === '"') {
+              current += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            cols.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        cols.push(current.trim());
+        lines.push(cols);
+      }
+      return lines;
+    }
+
+    // Initialize Page
+    document.addEventListener("DOMContentLoaded", () => {
+      // Load saved customer data and cart
+      const savedCart = localStorage.getItem('friends_cart');
+      if (savedCart) {
+        try { cart = JSON.parse(savedCart); } catch(e) { cart = {}; }
+      }
+      
+      const savedDetails = localStorage.getItem('friends_order_details');
+      if (savedDetails) {
+        try {
+          customerDetails = JSON.parse(savedDetails);
+          // Apply values to standard fields
+          document.getElementById('form-name').value = customerDetails.name || "";
+          document.getElementById('form-address').value = customerDetails.address || "";
+          document.getElementById('form-phone').value = customerDetails.phone || "";
+          document.getElementById('form-notes').value = customerDetails.notes || "";
+          
+          document.getElementById('mob-form-name').value = customerDetails.name || "";
+          document.getElementById('mob-form-address').value = customerDetails.address || "";
+          document.getElementById('mob-form-phone').value = customerDetails.phone || "";
+          document.getElementById('mob-form-notes').value = customerDetails.notes || "";
+        } catch(e) {}
+      }
+
+      // Sync form inputs live
+      setupFormListeners();
+
+      // Load products from Sheet/Cache
+      loadProductsData();
+    });
+
+    function setupFormListeners() {
+      const ids = ['name', 'address', 'phone', 'notes'];
+      ids.forEach(attr => {
+        const desktopInput = document.getElementById(`form-${attr}`);
+        const mobileInput = document.getElementById(`mob-form-${attr}`);
+        
+        if (desktopInput) {
+          desktopInput.addEventListener('input', (e) => {
+            customerDetails[attr] = e.target.value;
+            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
+            if (mobileInput) mobileInput.value = e.target.value;
+          });
+        }
+        
+        if (mobileInput) {
+          mobileInput.addEventListener('input', (e) => {
+            customerDetails[attr] = e.target.value;
+            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
+            if (desktopInput) desktopInput.value = e.target.value;
+          });
+        }
+      });
+    }
+
+    // API Sheet loader with caching fallback
+    async function loadProductsData() {
+      setLoadingUI(true);
       try {
         const res = await fetch(`${SHEET_URL}&t=${new Date().getTime()}`);
-        if (!res.ok) throw new Error("فشلت عملية التحميل من السيرفر المباشر");
+        if (!res.ok) throw new Error("فشل الجلب الفوري من جوجل شيتس");
         
-        const csvRawText = await res.text();
-        const parsedRows = parseCSV(csvRawText);
+        const rawCSV = await res.text();
+        const rows = parseCSV(rawCSV);
         
-        // Skip header row and map
-        const dataRows = parsedRows.slice(1);
-        const fetchedProducts: Product[] = dataRows
-          .map((cols, idx) => {
-            const rawPriceStr = cols[1] || "";
-            const cleanPriceStr = rawPriceStr.replace(/[^\d.]/g, '').trim();
-            const numericPrice = parseFloat(cleanPriceStr) || 0;
-
-            const name = cols[0] || "";
-            const cat = cols[2] || "أخرى";
-            const desc = cols[3] || "";
-            const img = cols[4] || "";
-
-            return {
-              id: `sheet-${idx}`,
-              name,
-              price: numericPrice,
-              cat,
-              desc,
-              img
-            };
-          })
-          .filter(p => p.name.trim().length > 0);
-
-        if (fetchedProducts.length === 0) {
-          throw new Error("لم يتم العثور على أي وجبات صالحة في جدول البيانات.");
-        }
-
-        setProducts(fetchedProducts);
-        setDataSource("sheets");
-        const fetchTime = new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' });
-        setLastFetched(fetchTime);
-        
-        // Cache in LocalStorage
-        localStorage.setItem('friends_menu_cache', JSON.stringify(fetchedProducts));
-        localStorage.setItem('friends_menu_last_fetch', fetchTime);
-      } catch (err) {
-        console.warn("خطأ في جلب المنيو المباشر، جاري محاولة تحميل النسخة المخزنة مؤقتاً:", err);
-        
-        // Attempt to load from cache
-        const cachedMenu = localStorage.getItem('friends_menu_cache');
-        const cachedTime = localStorage.getItem('friends_menu_last_fetch');
-        
-        if (cachedMenu) {
-          try {
-            setProducts(JSON.parse(cachedMenu));
-            setDataSource("cache");
-            setLastFetched(cachedTime);
-          } catch {
-            setProducts(FALLBACK_PRODUCTS);
-            setDataSource("fallback");
-          }
-        } else {
-          setProducts(FALLBACK_PRODUCTS);
-          setDataSource("fallback");
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    loadData();
-  }, []);
-
-  // Compute Categories from products dynamically
-  const categoriesList = useMemo(() => {
-    if (products.length === 0) return ["الكل"];
-    const uniqueCats = Array.from(new Set(products.map(p => p.cat).filter(Boolean)));
-    return ["الكل", ...uniqueCats];
-  }, [products]);
-
-  // Support Search / Category Filter
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchCat = currentCat === "الكل" || p.cat === currentCat;
-      const cleanSearch = searchQuery.toLowerCase().trim();
-      const matchSearch = !cleanSearch || 
-        p.name.toLowerCase().includes(cleanSearch) || 
-        (p.desc && p.desc.toLowerCase().includes(cleanSearch)) ||
-        p.cat.toLowerCase().includes(cleanSearch);
-      return matchCat && matchSearch;
-    });
-  }, [products, currentCat, searchQuery]);
-
-  // Compute total counts per category
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { "الكل": products.length };
-    products.forEach(p => {
-      counts[p.cat] = (counts[p.cat] || 0) + 1;
-    });
-    return counts;
-  }, [products]);
-
-  // Update Cart Quantity
-  const updateQty = (name: string, change: number) => {
-    setCart(prev => {
-      const currentQty = prev[name] || 0;
-      const newQty = Math.max(0, currentQty + change);
-      
-      const newCart = { ...prev };
-      if (newQty === 0) {
-        delete newCart[name];
-      } else {
-        newCart[name] = newQty;
-      }
-      return newCart;
-    });
-  };
-
-  // Clear entire cart
-  const clearCart = () => {
-    setCart({});
-  };
-
-  // Calculate Subtotal & Grand Total with precision
-  const cartStatistics = useMemo(() => {
-    let totalPrice = 0;
-    let totalItems = 0;
-    const itemsList: Array<{ product: Product; qty: number; itemSum: number }> = [];
-
-    // Map cart items against our current loaded products list
-    Object.entries(cart).forEach(([name, val]) => {
-      const qty = Number(val);
-      const matchedProduct = products.find(p => p.name === name);
-      if (matchedProduct && qty > 0) {
-        const itemSum = matchedProduct.price * qty;
-        totalPrice += itemSum;
-        totalItems += qty;
-        itemsList.push({
-          product: matchedProduct,
-          qty,
-          itemSum
-        });
-      }
-    });
-
-    return {
-      totalPrice,
-      totalItems,
-      itemsList
-    };
-  }, [cart, products]);
-
-  // Form input handler
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setOrderDetails(prev => ({
-      ...prev,
-      [id.replace('client-', '')]: value
-    }));
-  };
-
-  // Trigger WhatsApp Message Send
-  const handleSendOrder = (e: FormEvent) => {
-    e.preventDefault();
-    
-    const { name, address, phone, notes } = orderDetails;
-    if (!name.trim()) {
-      alert("الرجاء إدخال اسم الزبون لتوصيل الطلب!");
-      return;
-    }
-    if (!address.trim()) {
-      alert("الرجاء إدخال تفاصيل العنوان (مثال: الشارع، بجوار المسجد، الطابق) لتسهيل التوصيل!");
-      return;
-    }
-    if (cartStatistics.itemsList.length === 0) {
-      alert("سلتك فارغة! الرجاء إضافة بعض الوجبات أولاً قبل إرسال الطلب.");
-      return;
-    }
-
-    // Build perfect interactive invoice text
-    let msg = `*طلب جديد من المنيو الإلكتروني لمطعم فريندز 🍔📱*\n`;
-    msg += `──────────────────────\n`;
-    msg += `👤 *الزبون:* ${name.trim()}\n`;
-    msg += `📍 *العنوان:* ${address.trim()}\n`;
-    if (phone && phone.trim()) {
-      msg += `📞 *رقم الاتصال:* ${phone.trim()}\n`;
-    }
-    if (notes && notes.trim()) {
-      msg += `📝 *ملاحظات:* ${notes.trim()}\n`;
-    }
-    msg += `──────────────────────\n\n`;
-    msg += `🛒 *الطلبات المحددة:* \n\n`;
-
-    cartStatistics.itemsList.forEach((item, index) => {
-      msg += `${index + 1}. *${item.product.name}*\n`;
-      msg += `   الكمية: ${item.qty} × ${item.product.price.toLocaleString()} ل.س\n`;
-      msg += `   المجموع: *${item.itemSum.toLocaleString()} ل.س*\n\n`;
-    });
-
-    msg += `──────────────────────\n`;
-    msg += `💰 *الحساب الإجمالي للفاتورة:* *${cartStatistics.totalPrice.toLocaleString()} ل.س*\n`;
-    msg += `──────────────────────\n`;
-    msg += `🍔 *شكرًا لاختياركم مطعم Friends! سنصنع طلبكم بأفضل المكونات ونؤكده معكم بكل سرور.*`;
-
-    // URI encoding and redirection
-    const encodedText = encodeURIComponent(msg);
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedText}`;
-    
-    // Smooth order state
-    setOrderSent(true);
-    setTimeout(() => setOrderSent(false), 3000);
-    
-    // Open in new tab securely
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  // Scroll smoothly to checkout form
-  const scrollToCheckout = () => {
-    setShowCartDrawer(true);
-    setTimeout(() => {
-      bottomFormRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 150);
-  };
-
-  // Quick reload function to manually fetch live Sheet
-  const handleManualRefresh = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${SHEET_URL}&t=${new Date().getTime()}`);
-      if (!res.ok) throw new Error("فشلت الاستجابة المباشرة");
-      const csvRawText = await res.text();
-      const parsedRows = parseCSV(csvRawText);
-      const dataRows = parsedRows.slice(1);
-      
-      const fetchedProducts: Product[] = dataRows
-        .map((cols, idx) => {
-          const rawPriceStr = cols[1] || "";
-          const cleanPriceStr = rawPriceStr.replace(/[^\d.]/g, '').trim();
-          const numericPrice = parseFloat(cleanPriceStr) || 0;
+        // Skip header
+        const dataRows = rows.slice(1);
+        const mappedList = dataRows.map((cols, idx) => {
+          // Robust Arithmetic Check matching original fixes
+          const rawPrice = cols[1] || "";
+          const cleanPrice = rawPrice.replace(/[^\d.]/g, '').trim();
+          const parsedPrice = parseFloat(cleanPrice) || 0;
 
           return {
             id: `sheet-${idx}`,
             name: cols[0] || "",
-            price: numericPrice,
+            price: parsedPrice,
             cat: cols[2] || "أخرى",
             desc: cols[3] || "",
             img: cols[4] || ""
           };
-        })
-        .filter(p => p.name.trim().length > 0);
+        }).filter(p => p.name.trim().length > 0);
 
-      if (fetchedProducts.length > 0) {
-        setProducts(fetchedProducts);
-        setDataSource("sheets");
-        const fetchTime = new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' });
-        setLastFetched(fetchTime);
-        localStorage.setItem('friends_menu_cache', JSON.stringify(fetchedProducts));
-        localStorage.setItem('friends_menu_last_fetch', fetchTime);
+        if (mappedList.length === 0) throw new Error("جدول فارغ");
+
+        products = mappedList;
+        setConnectionState("sheets");
+        
+        // Cache locally
+        localStorage.setItem('friends_menu_cache', JSON.stringify(products));
+        const nowStr = new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' });
+        localStorage.setItem('friends_menu_last_fetch', nowStr);
+        updateLastFetchTime(nowStr);
+
+      } catch (err) {
+        console.warn("تعذر تحميل قوقل شيتس المباشر، محاولة جلب النسخة المخزنة مؤقتاً:", err);
+        
+        const cached = localStorage.getItem('friends_menu_cache');
+        const cachedTime = localStorage.getItem('friends_menu_last_fetch');
+        
+        if (cached) {
+          try {
+            products = JSON.parse(cached);
+            setConnectionState("cache");
+            updateLastFetchTime(cachedTime || "-");
+          } catch(e) {
+            products = FALLBACK_PRODUCTS;
+            setConnectionState("fallback");
+          }
+        } else {
+          products = FALLBACK_PRODUCTS;
+          setConnectionState("fallback");
+        }
+      } finally {
+        setLoadingUI(false);
+        refreshUILayout();
       }
-    } catch (e) {
-      alert("تعذر تحديث البيانات من جدول البيانات حاليًا. تم اعتماد المنيو المحفوظ محليًا.");
-      console.error(e);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col pb-36 font-sans relative antialiased" dir="rtl">
+    // Force reloading
+    async function handleManualRefresh() {
+      const refreshBtn = document.getElementById('refresh-btn');
+      refreshBtn.innerHTML = "<span>⏳ جاري التحديث...</span>";
+      refreshBtn.style.pointerEvents = "none";
       
-      {/* Upper Status Bar - Technical Resilience Details */}
-      <div className="bg-slate-900 text-[11px] text-slate-400 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 font-mono">
-        <div className="flex items-center gap-1.5">
-          {dataSource === "sheets" && (
-            <span className="flex items-center gap-1 text-emerald-400">
-              <Wifi className="w-3.5 h-3.5" />
-              <span>مباشر من جوجل شيتس (آمن ولحظي)</span>
-            </span>
-          )}
-          {dataSource === "cache" && (
-            <span className="flex items-center gap-1 text-amber-400">
-              <Clock className="w-3.5 h-3.5" />
-              <span>منيو مخبأ محلياً (سرعة إضافية مفعّلة)</span>
-            </span>
-          )}
-          {dataSource === "fallback" && (
-            <span className="flex items-center gap-1 text-sky-400">
-              <WifiOff className="w-3.5 h-3.5" />
-              <span>مستودع محلي آمن ومثالي للتحمل</span>
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {lastFetched && (
-            <span>آخر تحديث: {lastFetched}</span>
-          )}
+      await loadProductsData();
+      
+      refreshBtn.innerHTML = "<span>🔁 تحديث يدوي</span>";
+      refreshBtn.style.pointerEvents = "auto";
+    }
+
+    // Updates state connection presentation
+    function setConnectionState(type) {
+      const indicator = document.getElementById('network-indicator');
+      const text = document.getElementById('connection-text');
+      
+      indicator.className = "flex items-center gap-1";
+      if (type === "sheets") {
+        indicator.classList.add("text-emerald-400");
+        indicator.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> <span>مباشر من جوجل شيتس (آمن ولحظي)</span>';
+      } else if (type === "cache") {
+        indicator.classList.add("text-amber-400");
+        indicator.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> <span>منيو مخبأ محلياً (سرعة إضافية مفعّلة)</span>';
+      } else {
+        indicator.classList.add("text-sky-400");
+        indicator.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-3.536 4.978 4.978 0 011.414-3.536m0 0L5.636 5.636M12 12a1 1 0 100-2 1 1 0 000 2z"/></svg> <span>مستودع محلي آمن ومثالي للتحمل</span>';
+      }
+    }
+
+    function updateLastFetchTime(timeStr) {
+      if (!timeStr) return;
+      document.getElementById('last-update-wrapper').classList.remove('hidden');
+      document.getElementById('last-update-time').innerText = timeStr;
+    }
+
+    function setLoadingUI(isLoading) {
+      const spinner = document.getElementById('loading-spinner');
+      const grid = document.getElementById('products-grid');
+      
+      if (isLoading) {
+        spinner.classList.remove('hidden');
+        grid.classList.add('hidden');
+      } else {
+        spinner.classList.add('hidden');
+        grid.classList.remove('hidden');
+      }
+    }
+
+    // Refresh general layouts
+    function refreshUILayout() {
+      renderCategories();
+      renderProducts();
+      renderCartInvoice();
+      renderMobileStickyDock();
+    }
+
+    // Render Categories horizontal filter
+    function renderCategories() {
+      const scroller = document.getElementById('category-scroller');
+      
+      // Compute categories
+      const categories = ["الكل"];
+      const uniqueCats = Array.from(new Set(products.map(p => p.cat).filter(Boolean)));
+      const finalCats = categories.concat(uniqueCats);
+      
+      // Calculate item quantities per category
+      const counts = { "الكل": products.length };
+      products.forEach(p => {
+        counts[p.cat] = (counts[p.cat] || 0) + 1;
+      });
+
+      let html = "";
+      finalCats.forEach(cat => {
+        const isActive = (cat === currentCategory);
+        const activeClasses = isActive 
+          ? "bg-red-600 text-white font-bold border-red-650 shadow-md shadow-red-100 scale-[1.03]" 
+          : "bg-white hover:bg-slate-100 text-slate-600 font-medium border-slate-200";
+          
+        html += `
           <button 
-            onClick={handleManualRefresh}
-            disabled={loading}
-            className="text-white hover:text-red-400 font-sans cursor-pointer transition flex items-center gap-1 text-[11px]"
+            onclick="selectCategory('${cat}')"
+            class="px-4.5 py-2 rounded-xl text-xs whitespace-nowrap transition border select-none cursor-pointer flex items-center gap-1.5 ${activeClasses}"
           >
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "🔁 تحديث قسري"}
+            <span>${cat}</span>
+            <span class="${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'} text-[10px] px-1.5 py-0.5 rounded-full font-bold font-mono">
+              ${counts[cat] || 0}
+            </span>
           </button>
-        </div>
-      </div>
+        `;
+      });
+      
+      scroller.innerHTML = html;
+    }
 
-      {/* Hero Header Presentation */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-red-800 to-red-650 text-white shadow-lg pt-8 pb-10 px-4">
-        {/* Abstract decorative elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-red-900/40 rounded-full -ml-16 -mb-16 blur-xl pointer-events-none" />
+    function selectCategory(cat) {
+      currentCategory = cat;
+      refreshUILayout();
+    }
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex p-3 bg-white/10 backdrop-blur-md rounded-2xl mb-4 border border-white/20 shadow-inner"
-          >
-            <span className="text-4xl">🍔</span>
-          </motion.div>
+    // Render Filtered Food Menu
+    function renderProducts() {
+      const grid = document.getElementById('products-grid');
+      const emptyState = document.getElementById('empty-state');
+      
+      // Filter products
+      const filtered = products.filter(p => {
+        const matchCat = (currentCategory === "الكل" || p.cat === currentCategory);
+        const search = searchQuery.toLowerCase().trim();
+        const matchSearch = !search || 
+          p.name.toLowerCase().includes(search) || 
+          (p.desc && p.desc.toLowerCase().includes(search)) ||
+          p.cat.toLowerCase().includes(search);
           
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-sm font-sans mb-2">
-            مطعم Friends
-          </h1>
-          
-          <p className="text-red-100 text-sm max-w-lg mx-auto leading-relaxed mb-4 font-sans font-light">
-            صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم
-          </p>
-          
-          {/* Action pills */}
-          <div className="flex justify-center flex-wrap gap-2.5 mt-2">
-            <a 
-              href={`tel:${RESTAURANT_PHONE}`}
-              className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all text-xs font-semibold flex items-center gap-1.5 border border-white/10 hover:scale-[1.02]"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>اتصل بنا: 0116712121</span>
-            </a>
-            
-            <a 
-              href={`https://wa.me/${WHATSAPP_NUMBER}`} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="px-3.5 py-1.5 rounded-full bg-emerald-600/90 hover:bg-emerald-600 transition-all text-xs font-semibold flex items-center gap-1.5 shadow-md border border-emerald-500/30 hover:scale-[1.02]"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>واتساب: 0955929797</span>
-            </a>
+        return matchCat && matchSearch;
+      });
 
-            <div className="px-3.5 py-1.5 rounded-full bg-red-900/50 text-xs flex items-center gap-1.5 border border-red-800/30">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>التوصيل مجاني لجميع مناطق صحنايا 🤩</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      if (filtered.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
 
-      {/* Main Core Section */}
-      <main className="max-w-6xl w-full mx-auto p-4 flex-1 flex flex-col md:flex-row gap-6">
+      emptyState.classList.add('hidden');
+      grid.classList.remove('hidden');
+
+      let html = "";
+      filtered.forEach(p => {
+        const currentQty = cart[p.name] || 0;
+        const formattedPrice = p.price.toLocaleString();
         
-        {/* Products explorer and category navigation column */}
-        <div className="flex-1">
-          
-          {/* Floating Category and Search Area */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 sticky top-2 z-30 backdrop-blur-md bg-white/95">
-            {/* Search inputs */}
-            <div className="relative mb-4">
-              <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                <Search className="w-5 h-5" />
-              </span>
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="🔍 ابحث عن وجبة شهية... شاورما، كريسبي، برجر"
-                className="w-full pr-10 pl-10 py-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-4 focus:ring-red-100 transition duration-200 outline-none text-sm placeholder:text-slate-400 bg-slate-50/50"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery("")}
-                  className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Scrollable categories menu */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none scroll-smooth">
-              {categoriesList.map((cat) => {
-                const count = categoryCounts[cat] || 0;
-                const isSelected = currentCat === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setCurrentCat(cat);
-                    }}
-                    className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition duration-205 cursor-pointer ${
-                      isSelected 
-                        ? 'bg-red-600 text-white shadow-md shadow-red-200 hover:bg-red-700' 
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
-                    }`}
-                  >
-                    <span>{cat}</span>
-                    <span className={`mr-1 px-1.5 py-0.2 rounded-full text-[10px] ${isSelected ? 'bg-red-800 text-red-100' : 'bg-slate-200 text-slate-500'}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Fallback & Data warning indicator block */}
-          {dataSource === "fallback" && (
-            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <p>
-                تم تفعيل وضع مقاومة انقطاع الخدمة: المنيو يعرض الأن قاعدة بيانات فريندز المحلية السريعة للتوصيل الآمن وحساب الفاتورة بدقة 100%.
-              </p>
-            </div>
-          )}
-
-          {/* Loading Indicator */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-              <Loader2 className="w-10 h-10 animate-spin text-red-650 mb-3" />
-              <p className="text-slate-500 text-sm font-medium">جاري تحديث وتجهيز المنيو الفوري بمقاييس دقيقة...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AnimatePresence>
-                {filteredProducts.map((p) => {
-                  const currentQty = cart[p.name] || 0;
-                  const hasImageError = imageErrors[p.id];
-
-                  // Formatter for accurate Syrian Pound Display
-                  const formattedPrice = p.price.toLocaleString();
-
-                  return (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -12 }}
-                      transition={{ duration: 0.2 }}
-                      key={p.id}
-                      className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-250 transition-all duration-200 group relative"
-                    >
-                      {/* Product thumbnail image with customized food icon fallback */}
-                      <div className="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-100 flex-shrink-0 border border-slate-100 shadow-inner">
-                        {p.img && !hasImageError ? (
-                          <img 
-                            src={p.img} 
-                            alt={p.name}
-                            referrerPolicy="no-referrer"
-                            onError={() => setImageErrors(prev => ({ ...prev, [p.id]: true }))}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-350"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-red-500/80 bg-red-50/50">
-                            <Utensils className="w-7 h-7 mb-1" />
-                            <span className="text-[9px] font-medium text-red-400"> Friends 🍔</span>
-                          </div>
-                        )}
-                        
-                        {/* Food badge inside card image */}
-                        <div className="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
-                          {p.cat}
-                        </div>
-                      </div>
-
-                      {/* Product copy details */}
-                      <div className="flex-1 flex flex-col justify-between py-0.5">
-                        <div>
-                          <div className="flex items-center gap-1.5 justify-between">
-                            <h3 className="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition duration-150 leading-snug">
-                              {p.name}
-                            </h3>
-                          </div>
-                          {p.desc && (
-                            <p className="text-slate-500 text-[11px] leading-relaxed mt-1 line-clamp-2">
-                              {p.desc}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Interactive pricing & custom calculator controls */}
-                        <div className="flex items-end justify-between mt-2.5">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-light leading-none mb-0.5">سعر الوجبة</span>
-                            <span className="text-red-600 font-extrabold text-[15px] font-mono tracking-tight">
-                              {formattedPrice} <span className="text-[10px] font-bold font-sans">ل.س</span>
-                            </span>
-                          </div>
-
-                          {/* Refined arithmetic increments */}
-                          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-full border border-slate-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                            <button
-                              onClick={() => updateQty(p.name, -1)}
-                              className={`w-7.5 h-7.5 rounded-full font-bold flex items-center justify-center cursor-pointer transition ${
-                                currentQty > 0 
-                                  ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' 
-                                  : 'bg-transparent text-slate-300 pointer-events-none'
-                              }`}
-                              title="إزالة وجبة"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            
-                            <span className={`font-mono text-xs font-bold text-center min-w-4 ${currentQty > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
-                              {currentQty}
-                            </span>
-                            
-                            <button
-                              onClick={() => {
-                                updateQty(p.name, 1);
-                              }}
-                              className="w-7.5 h-7.5 rounded-full bg-red-650 hover:bg-red-700 text-white font-bold flex items-center justify-center cursor-pointer shadow-sm shadow-red-200 active:scale-95 transition-all"
-                              title="إضافة وجبة"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-
-              {filteredProducts.length === 0 && (
-                <div className="col-span-full py-16 px-4 bg-white rounded-3xl border border-slate-100 text-center flex flex-col items-center">
-                  <span className="text-4xl mb-3">🥪</span>
-                  <h3 className="font-bold text-slate-800 mb-1">لم نجد ما تبحث عنه بالمنيو!</h3>
-                  <p className="text-slate-400 text-xs">جرب البحث بكلمة أخرى مثل 'شاورما' أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
-                  <button 
-                    onClick={() => { setSearchQuery(""); setCurrentCat("الكل"); }}
-                    className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition"
-                  >
-                    عرض كل الوجبات
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Real-time Order & Calculations Sidebar Voucher */}
-        <div className="w-full md:w-85 lg:w-96 flex-shrink-0">
-          <div className="bg-white rounded-2xl border border-slate-150 p-4.5 shadow-sm sticky top-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
-              <h2 className="font-bold text-[16px] text-slate-800 flex items-center gap-2">
-                <ShoppingBag className="w-4.5 h-4.5 text-red-600" />
-                <span>فاتورة طلباتك التفاعلية</span>
-              </h2>
-              {cartStatistics.totalItems > 0 && (
-                <button 
-                  onClick={clearCart}
-                  className="text-[11px] text-slate-400 hover:text-red-600 font-semibold flex items-center gap-0.5 cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>تصفير الفاتورة</span>
-                </button>
-              )}
-            </div>
-
-            {cartStatistics.itemsList.length === 0 ? (
-              <div className="py-8 text-center flex flex-col items-center justify-center">
-                <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-330 mb-3 border border-dashed border-slate-200">
-                  <ShoppingBag className="w-6 h-6 text-slate-350" />
-                </div>
-                <p className="text-slate-600 font-medium text-xs">سلتك لا تزال فارغة حاليًا</p>
-                <p className="text-slate-400 text-[10px] mt-1 max-w-[180px] mx-auto leading-relaxed">
-                  تصفح المنيو بالأعلى وأضف وجباتك المفضلة وسنقوم بتجهيز الحساب فوراً تلقائياً!
-                </p>
+        // Render single card
+        html += `
+          <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-200 transition duration-200 animate-fadeIn group relative">
+            
+            <!-- Food Thumbnail Image -->
+            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-105 flex-shrink-0 border border-slate-100/60 shadow-inner">
+              ${p.img ? `
+                <img 
+                  src="${p.img}" 
+                  alt="${p.name}" 
+                  referrerpolicy="no-referrer"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ` : ''}
+              
+              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50 ${p.img ? 'hidden' : 'flex'}" style="display: ${p.img ? 'none' : 'flex'}">
+                <svg class="w-7 h-7 mb-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="text-[9px] font-medium text-red-400">Friends 🍔</span>
               </div>
-            ) : (
+
+              <!-- Inline Badge Badge -->
+              <div class="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
+                ${p.cat}
+              </div>
+            </div>
+
+            <!-- Copywriting and Adders -->
+            <div class="flex-1 flex flex-col justify-between py-0.5">
               <div>
-                {/* Scrollable list of picked items within invoice */}
-                <div className="space-y-3 max-h-56 overflow-y-auto pl-1">
-                  {cartStatistics.itemsList.map(({ product, qty, itemSum }) => (
-                    <div key={product.id} className="flex justify-between items-start gap-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100 text-xs">
-                      <div className="flex-1">
-                        <p className="font-bold text-slate-800 leading-snug">{product.name}</p>
-                        <p className="text-slate-500 font-mono text-[10px] mt-0.5">
-                          {qty} × {product.price.toLocaleString()} ل.س
-                        </p>
-                      </div>
-                      <div className="text-left font-mono font-bold text-slate-900 pr-1 select-none">
-                        {itemSum.toLocaleString()} ل.س
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Arithmetic Breakdown */}
-                <div className="border-t border-slate-100 pt-3.5 mt-4 space-y-2">
-                  <div className="flex justify-between text-xs text-slate-500 font-medium">
-                    <span>عدد الوجبات الكلية:</span>
-                    <span className="font-mono text-slate-800 font-bold">{cartStatistics.totalItems}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500 font-medium">
-                    <span>تكلفة التوصيل (صحنايا):</span>
-                    <span className="text-emerald-600 font-bold flex items-center gap-1">
-                      <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold">مجاني بالكامل 🤩</span>
-                      <span>0 ل.س</span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-slate-900 font-extrabold border-t border-dashed border-slate-200 pt-3.5 mt-2">
-                    <span className="text-slate-800">الحساب الإجمالي الكلي:</span>
-                    <span className="font-mono text-red-600 text-base">
-                      {cartStatistics.totalPrice.toLocaleString()} ل.س
-                    </span>
-                  </div>
-                </div>
-
-                {/* Checkout Fields (Integrated neatly inside the invoice form) */}
-                <form onSubmit={handleSendOrder} className="border-t border-slate-100 pt-4 mt-4 space-y-3">
-                  <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>تفاصيل توصيل الزبون:</span>
-                  </h3>
-                  
-                  <div>
-                    <label htmlFor="client-name" className="sr-only">اسم الزبون</label>
-                    <input 
-                      type="text" 
-                      id="client-name"
-                      required
-                      value={orderDetails.name}
-                      onChange={handleInputChange}
-                      placeholder="👤 اسم الزبون الكامل..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="client-address" className="sr-only">العنوان بالتفصيل</label>
-                    <input 
-                      type="text" 
-                      id="client-address"
-                      required
-                      value={orderDetails.address}
-                      onChange={handleInputChange}
-                      placeholder="📍 العنوان بالتفصيل (الحي، الشارع، علامة مميزة)..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="client-phone" className="sr-only">رقم الهاتف للاتصال</label>
-                    <input 
-                      type="tel" 
-                      id="client-phone"
-                      value={orderDetails.phone}
-                      onChange={handleInputChange}
-                      placeholder="📞 رقم الهاتف للاتصال (اختياري)..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="client-notes" className="sr-only">أية ملاحظات إضافية</label>
-                    <textarea 
-                      id="client-notes"
-                      value={orderDetails.notes}
-                      onChange={handleInputChange}
-                      rows={2}
-                      placeholder="📝 أي ملاحظات للطلب؟ مثال: بدون مايونيز، كريم ثوم إضافي..."
-                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full mt-3 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden"
-                  >
-                    <span>🚀 إرسال الفاتورة عبر الواتساب</span>
-                    {orderSent && (
-                      <span className="absolute inset-0 bg-emerald-600 flex items-center justify-center gap-1.5 transition-all">
-                        <Check className="w-5 h-5 animate-bounce" />
-                        <span>تم تجهيز الطلب للواتساب!</span>
-                      </span>
-                    )}
-                  </button>
-                </form>
+                <h3 class="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition leading-snug">
+                  ${p.name}
+                </h3>
+                ${p.desc ? `
+                  <p class="text-slate-500 text-[11px] leading-relaxed mt-1 line-clamp-2">
+                    ${p.desc}
+                  </p>
+                ` : ''}
               </div>
-            )}
-          </div>
-        </div>
-      </main>
 
-      {/* Mobile Sticky Quick Basket Panel - Appears when screen is small and item is selected */}
-      <AnimatePresence>
-        {cartStatistics.totalItems > 0 && !showCartDrawer && (
-          <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            className="md:hidden fixed bottom-4 inset-x-4 bg-slate-900/95 backdrop-blur-lg text-white p-3.5 rounded-2xl shadow-xl border border-slate-800 z-40 flex items-center justify-between pointer-events-auto"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="relative p-2 bg-red-600 rounded-xl">
-                <ShoppingBag className="w-5 h-5 text-white" />
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-slate-900 font-mono font-extrabold text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center">
-                  {cartStatistics.totalItems}
-                </span>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-light leading-none">مجموع طلباتك</p>
-                <p className="font-mono font-bold text-sm tracking-tight mt-0.5">
-                  {cartStatistics.totalPrice.toLocaleString()} <span className="text-[10px] font-sans text-red-400">ل.س</span>
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={scrollToCheckout}
-              className="bg-red-650 hover:bg-red-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-sm cursor-pointer"
-            >
-              عرض الفاتورة وإرسال الطلب
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Floating Detailed Cart Modal for Mobile View */}
-      <AnimatePresence>
-        {showCartDrawer && (
-          <div className="fixed inset-0 z-50 md:hidden bg-slate-900/50 backdrop-blur-sm flex items-end">
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto p-4 flex flex-col border-t border-slate-200"
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <h2 className="font-bold text-base text-slate-900">سلة طلباتك الشهية</h2>
-                  <span className="bg-red-100 text-red-700 text-xs font-extrabold font-mono px-2 py-0.5 rounded-full">
-                    {cartStatistics.totalItems} وجبات
+              <!-- Price Tag & Counter -->
+              <div class="flex items-end justify-between mt-2.5">
+                <div>
+                  <span class="text-[10px] text-slate-400 block font-light leading-none mb-0.5">سعر الوجبة</span>
+                  <span class="text-red-600 font-extrabold text-[15px] font-mono tracking-tight">
+                    ${formattedPrice} <span class="text-[10px] font-bold font-sans">ل.س</span>
                   </span>
                 </div>
-                <button 
-                  onClick={() => setShowCartDrawer(false)}
-                  className="p-1 px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full text-xs font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>إغلاق الملحق</span>
-                </button>
+
+                <!-- Circular counter increments -->
+                <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-full border border-slate-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] select-none">
+                  <button 
+                    onclick="updateCartQty('${p.name}', -1)"
+                    class="w-7.5 h-7.5 rounded-full font-bold flex items-center justify-center cursor-pointer transition w-7 h-7 ${currentQty > 0 ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' : 'bg-transparent text-slate-300 pointer-events-none'}"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                  </button>
+                  
+                  <span class="font-mono text-xs font-bold text-center min-w-[16px] ${currentQty > 0 ? 'text-slate-800' : 'text-slate-300'}">
+                    ${currentQty}
+                  </span>
+                  
+                  <button 
+                    onclick="updateCartQty('${p.name}', 1)"
+                    class="w-7 h-7 rounded-full bg-red-650 hover:bg-red-700 text-white font-bold flex items-center justify-center cursor-pointer shadow-sm shadow-red-200 active:scale-95 transition"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  </button>
+                </div>
               </div>
 
-              {cartStatistics.itemsList.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-slate-500 text-sm">سلتك فارغة، أضف بعض الوجبات وسحب الفاتورة!</p>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col space-y-4">
-                  {/* Voucher Itemized List */}
-                  <div className="space-y-2.5 max-h-48 overflow-y-auto pl-1">
-                    {cartStatistics.itemsList.map(({ product, qty, itemSum }) => (
-                      <div key={product.id} className="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-800">{product.name}</p>
-                          <p className="text-slate-500 font-mono mt-0.5">
-                            {qty} × {product.price.toLocaleString()} ل.س
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Sync buttons inside cart modal */}
-                          <button onClick={() => updateQty(product.name, -1)} className="w-6 h-6 rounded-full bg-white hover:bg-red-50 text-slate-600 flex items-center justify-center border border-slate-200 cursor-pointer">
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="font-mono font-bold text-slate-800 text-center min-w-4">{qty}</span>
-                          <button onClick={() => updateQty(product.name, 1)} className="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="text-left font-mono font-bold text-slate-900 pr-2 select-none min-w-[70px]">
-                          {itemSum.toLocaleString()} ل.س
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Calculations Details */}
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-2 text-xs">
-                    <div className="flex justify-between text-slate-600">
-                      <span>تكلفة وجبات الطعام:</span>
-                      <span className="font-mono font-bold text-slate-900">{cartStatistics.totalPrice.toLocaleString()} ل.س</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>خدمة التوصيل بصحنايا:</span>
-                      <span className="text-emerald-705 font-bold">مجاني بالكامل 🎉</span>
-                    </div>
-                    <div className="flex justify-between text-slate-900 font-bold text-sm border-t border-slate-200/60 pt-2 mt-1">
-                      <span>الحساب الإجمالي الكلي:</span>
-                      <span className="font-mono text-red-600 text-base">{cartStatistics.totalPrice.toLocaleString()} ل.س</span>
-                    </div>
-                  </div>
-
-                  {/* Customer Checkout Form inside drawer */}
-                  <div ref={bottomFormRef} className="space-y-3 pt-2">
-                    <h3 className="text-xs font-bold text-slate-705 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-red-500" />
-                      <span>معلومات الزبون لمندوب التوصيل:</span>
-                    </h3>
-                    
-                    <input 
-                      type="text" 
-                      id="mobile-client-name"
-                      required
-                      value={orderDetails.name}
-                      onChange={(e) => setOrderDetails(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="👤 اسمك الكريم بالكامل..."
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
-                    />
-
-                    <input 
-                      type="text" 
-                      id="mobile-client-address"
-                      required
-                      value={orderDetails.address}
-                      onChange={(e) => setOrderDetails(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="📍 العنوان بدقة (الحارة، البناية، علامة قريبة)..."
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
-                    />
-
-                    <input 
-                      type="tel" 
-                      id="mobile-client-phone"
-                      value={orderDetails.phone}
-                      onChange={(e) => setOrderDetails(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="📞 رقم الموبايل للاتصال بك (اختياري)..."
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
-                    />
-
-                    <textarea 
-                      id="mobile-client-notes"
-                      value={orderDetails.notes}
-                      onChange={(e) => setOrderDetails(prev => ({ ...prev, notes: e.target.value }))}
-                      rows={2}
-                      placeholder="📝 هل لديك أي ملحوظات؟ (زيادة بصل، تخفيف توم، الخ...)"
-                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none bg-slate-50/20"
-                    />
-
-                    <button
-                      onClick={handleSendOrder}
-                      className="w-full bg-emerald-650 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-100 transition active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-3"
-                    >
-                      <span>🚀 تثبيت وإرسال الطلب للواتساب</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        `;
+      });
 
-      {/* Modern Compact Responsive Footer branding details */}
-      <footer className="mt-auto py-8 bg-slate-950 text-center text-slate-500 border-t border-slate-900 px-4 text-xs">
-        <p className="font-semibold text-slate-400">🍔 مطعم Friends صحنايا</p>
-        <p className="mt-1 font-light text-[11px] text-slate-600 leading-relaxed max-w-md mx-auto">
-          المنيو الإلكتروني التفاعلي للطلب الفوري. نخدم أهالي صحنايا الحبيبة بكل فخر. نوصل طلبكم ساخناً مقرمشاً بدقة حسابات 100%.
-        </p>
-        <div className="flex justify-center items-center gap-1.5 text-[9px] text-slate-700 font-mono mt-4">
-          <span>FRIENDS_V2_RESILIENT</span>
-          <span>•</span>
-          <span>STABLE_ARITHMETIC_PRECISION</span>
-        </div>
-      </footer>
+      grid.innerHTML = html;
+    }
 
-    </div>
-  );
-}
+    // Dynamic Search input
+    function handleSearch(val) {
+      searchQuery = val;
+      const clearBtn = document.getElementById('clear-search-btn');
+      if (val.trim()) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderProducts();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = "";
+      searchQuery = "";
+      document.getElementById('clear-search-btn').classList.add('hidden');
+      renderProducts();
+    }
+
+    function resetFilters() {
+      clearSearch();
+      currentCategory = "الكل";
+      refreshUILayout();
+    }
+
+    // Update Basket Increment / Decrement Quantities
+    function updateCartQty(name, change) {
+      const current = cart[name] || 0;
+      const next = Math.max(0, current + change);
+      
+      if (next === 0) {
+        delete cart[name];
+      } else {
+        cart[name] = next;
+      }
+
+      // Sync and render
+      localStorage.setItem('friends_cart', JSON.stringify(cart));
+      refreshUILayout();
+    }
+
+    function clearCart() {
+      if (confirm("هل أنت متأكد من رغبتك في تفريغ سلة وجباتك؟")) {
+        cart = {};
+        localStorage.setItem('friends_cart', JSON.stringify(cart));
+        refreshUILayout();
+      }
+    }
+
+    // Calculations calculations statistics
+    function getCartStatistics() {
+      let totalPrice = 0;
+      let totalItems = 0;
+      const itemsList = [];
+
+      Object.entries(cart).forEach(([name, qty]) => {
+        const matched = products.find(p => p.name === name);
+        if (matched && qty > 0) {
+          const itemSum = matched.price * qty;
+          totalPrice += itemSum;
+          totalItems += qty;
+          itemsList.push({
+            product: matched,
+            qty,
+            itemSum
+          });
+        }
+      });
+
+      return { totalPrice, totalItems, itemsList };
+    }
+
+    // Render Side Invoice
+    function renderCartInvoice() {
+      const stats = getCartStatistics();
+      
+      const emptyDiv = document.getElementById('invoice-cart-empty');
+      const fullDiv = document.getElementById('invoice-cart-full');
+      const clearBtn = document.getElementById('clear-cart-btn');
+      
+      if (stats.totalItems === 0) {
+        emptyDiv.classList.remove('hidden');
+        fullDiv.classList.add('hidden');
+        clearBtn.classList.add('hidden');
+        return;
+      }
+
+      emptyDiv.classList.add('hidden');
+      fullDiv.classList.remove('hidden');
+      clearBtn.classList.remove('hidden');
+
+      // Update basic fields
+      document.getElementById('invoice-total-count').innerText = stats.totalItems;
+      document.getElementById('invoice-total-price').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+
+      // Render items
+      const itemsContainer = document.getElementById('invoice-items');
+      let html = "";
+      stats.itemsList.forEach(item => {
+        html += `
+          <div class="flex justify-between items-start gap-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 text-xs">
+            <div class="flex-1">
+              <p class="font-bold text-slate-800 leading-snug">${item.product.name}</p>
+              <p class="text-slate-500 font-mono text-[10px] mt-0.5">
+                ${item.qty} × ${item.product.price.toLocaleString()} ل.س
+              </p>
+            </div>
+            
+            <div class="flex items-center gap-1.5 select-none pr-1">
+              <button onclick="updateCartQty('${item.product.name}', -1)" class="w-5 h-5 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+              </button>
+              <span class="font-mono font-bold text-slate-800 min-w-[12px] text-center">${item.qty}</span>
+              <button onclick="updateCartQty('${item.product.name}', 1)" class="w-5 h-5 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+
+            <div class="text-left font-mono font-bold text-slate-900 pr-1 min-w-[75px]">
+              ${item.itemSum.toLocaleString()} ل.س
+            </div>
+          </div>
+        `;
+      });
+      itemsContainer.innerHTML = html;
+    }
+
+    // Render Sticky Bottom Action Dock
+    function renderMobileStickyDock() {
+      const stats = getCartStatistics();
+      const dock = document.getElementById('mobile-sticky-dock');
+      
+      if (stats.totalItems > 0) {
+        dock.classList.remove('hidden');
+        dock.classList.add('flex');
+        document.getElementById('mobile-dock-badge').innerText = stats.totalItems;
+        document.getElementById('mobile-dock-price').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+      } else {
+        dock.classList.add('hidden');
+        dock.classList.remove('flex');
+        closeMobileDrawer();
+      }
+    }
+
+    // Open detailed checkout drawer on phones
+    function scrollToCheckoutForm() {
+      const overlay = document.getElementById('mobile-drawer-overlay');
+      const drawer = document.getElementById('mobile-drawer-content');
+      
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+      
+      // Render details
+      const stats = getCartStatistics();
+      document.getElementById('mobile-drawer-count-badge').innerText = `${stats.totalItems} وجبات`;
+      document.getElementById('mobile-drawer-items-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+      document.getElementById('mobile-drawer-total-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+      
+      const drawerItems = document.getElementById('mobile-drawer-items');
+      let html = "";
+      stats.itemsList.forEach(item => {
+        html += `
+          <div class="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+            <div class="flex-1">
+              <p class="font-bold text-slate-800">${item.product.name}</p>
+              <p class="text-slate-500 font-mono mt-0.5">
+                ${item.qty} × ${item.product.price.toLocaleString()} ل.س
+              </p>
+            </div>
+            
+            <div class="flex items-center gap-2 select-none">
+              <button onclick="updateCartQty('${item.product.name}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+              </button>
+              <span class="font-mono font-bold text-slate-800 min-w-[14px] text-center">${item.qty}</span>
+              <button onclick="updateCartQty('${item.product.name}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+
+            <div class="text-left font-mono font-bold text-slate-900 pr-2 min-w-[70px]">
+              ${item.itemSum.toLocaleString()} ل.س
+            </div>
+          </div>
+        `;
+      });
+      drawerItems.innerHTML = html;
+
+      // Animate sliding up
+      setTimeout(() => {
+        drawer.classList.remove('translate-y-full');
+        drawer.classList.add('translate-y-0');
+      }, 50);
+    }
+
+    function closeMobileDrawer() {
+      const overlay = document.getElementById('mobile-drawer-overlay');
+      const drawer = document.getElementById('mobile-drawer-content');
+      
+      drawer.classList.remove('translate-y-0');
+      drawer.classList.add('translate-y-full');
+      
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+      }, 250);
+    }
+
+    // Submit and construct perfect responsive WhatsApp Redirect links
+    function handleSendOrder(event, isMobileDrawer = false) {
+      event.preventDefault();
+      
+      const name = isMobileDrawer 
+        ? document.getElementById('mob-form-name').value.trim() 
+        : document.getElementById('form-name').value.trim();
+        
+      const address = isMobileDrawer 
+        ? document.getElementById('mob-form-address').value.trim() 
+        : document.getElementById('form-address').value.trim();
+        
+      const phone = isMobileDrawer 
+        ? document.getElementById('mob-form-phone').value.trim() 
+        : document.getElementById('form-phone').value.trim();
+        
+      const notes = isMobileDrawer 
+        ? document.getElementById('mob-form-notes').value.trim() 
+        : document.getElementById('form-notes').value.trim();
+
+      const stats = getCartStatistics();
+
+      if (!name) {
+        alert("الرجاء إدخال اسم الزبون لتوصيل الطلب!");
+        return;
+      }
+      if (!address) {
+        alert("الرجاء إدخال تفاصيل العنوان (مثال: الشارع، بجوار المسجد، الطابق) لتسهيل التوصيل!");
+        return;
+      }
+      if (stats.itemsList.length === 0) {
+        alert("سلتك فارغة! الرجاء إضافة بعض الوجبات أولاً قبل إرسال الطلب.");
+        return;
+      }
+
+      // Build perfect responsive receipt text
+      let msg = `*طلب جديد من المنيو الإلكتروني لمطعم فريندز 🍔📱*\n`;
+      msg += `──────────────────────\n`;
+      msg += `👤 *الزبون:* ${name}\n`;
+      msg += `📍 *العنوان:* ${address}\n`;
+      if (phone) {
+        msg += `📞 *رقم الاتصال:* ${phone}\n`;
+      }
+      if (notes) {
+        msg += `📝 *ملاحظات:* ${notes}\n`;
+      }
+      msg += `──────────────────────\n\n`;
+      msg += `🛒 *الطلبات المحددة:* \n\n`;
+
+      stats.itemsList.forEach((item, index) => {
+        msg += `${index + 1}. *${item.product.name}*\n`;
+        msg += `   الكمية: ${item.qty} × ${item.product.price.toLocaleString()} ل.س\n`;
+        msg += `   المجموع: *${item.itemSum.toLocaleString()} ل.س*\n\n`;
+      });
+
+      msg += `──────────────────────\n`;
+      msg += `💰 *الحساب الإجمالي للفاتورة:* *${stats.totalPrice.toLocaleString()} ل.س*\n`;
+      msg += `──────────────────────\n`;
+      msg += `🍔 *شكرًا لاختياركم مطعم Friends! سنصنع طلبكم بأفضل المكونات ونؤكده معكم بكل سرور.*`;
+
+      // Redirect link
+      const encoded = encodeURIComponent(msg);
+      const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+      
+      // Update Button State to show Success trigger
+      const submitBtn = isMobileDrawer 
+        ? document.querySelector('#mobile-drawer-form button[type="submit"]')
+        : document.querySelector('#checkout-form button[type="submit"]');
+        
+      const oldHTML = submitBtn.innerHTML;
+      submitBtn.innerHTML = `
+        <span class="flex items-center justify-center gap-1">
+          <svg class="w-5 h-5 animate-bounce text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span>تم تجهيز الطلب للواتساب!</span>
+        </span>
+      `;
+      submitBtn.style.backgroundColor = "#10b981"; // Emerald green
+      
+      setTimeout(() => {
+        submitBtn.innerHTML = oldHTML;
+        submitBtn.style.backgroundColor = ""; 
+      }, 3000);
+
+      // Open tab securely
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  </script>
+</body>
+</html>
