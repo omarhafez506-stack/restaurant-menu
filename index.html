@@ -27,7 +27,7 @@
     }
   </script>
 
-  <!-- Google Font Cairo for Arabic Typography -->
+  <!-- Google Font Cairo for elegant Arabic Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -58,6 +58,7 @@
       animation: fadeIn 0.3s ease-out forwards;
     }
     
+    /* Extra spacing adjustments */
     body {
       background-color: #f8fafc;
       font-family: 'Cairo', sans-serif;
@@ -159,7 +160,8 @@
         <!-- Categories Slider Box -->
         <div class="relative">
           <div id="category-scroller" class="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 hide-scrollbar scroll-smooth">
-            <div class="px-4 py-8 text-center text-xs text-slate-404">جاري الترتيب...</div>
+            <!-- Dynamically populated categories -->
+            <div class="px-4 py-8 text-center text-xs text-slate-400">جاري الترتيب...</div>
           </div>
         </div>
       </div>
@@ -178,7 +180,7 @@
       <div id="empty-state" class="hidden py-16 px-4 bg-white rounded-3xl border border-slate-100 text-center flex flex-col items-center">
         <span class="text-4xl mb-3">🥪</span>
         <h3 class="font-bold text-slate-800 mb-1">لم نجد ما تبحث عنه بالمنيو!</h3>
-        <p class="text-slate-500 text-xs">جرب البحث بكلمة أخرى أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
+        <p class="text-slate-500 text-xs">جرب البحث بكلمة أخرى مثل 'شاورما' أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
         <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition cursor-pointer select-none">
           عرض كل الوجبات
         </button>
@@ -250,7 +252,7 @@
                 id="form-name" 
                 required
                 placeholder="👤 اسم الزبون الكامل..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -260,7 +262,7 @@
                 id="form-address" 
                 required
                 placeholder="📍 العنوان بدقة (الشارع، معالم قريبة)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -269,7 +271,7 @@
                 type="tel" 
                 id="form-phone" 
                 placeholder="📞 رقم الهاتف للاتصال بك (اختياري)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -278,13 +280,14 @@
                 id="form-notes" 
                 rows="2"
                 placeholder="📝 أي ملاحظات؟ (إضافة ثوم، بدون بصل، الخ)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
               ></textarea>
             </div>
 
             <button 
               type="submit" 
-              class="w-full bg-red-650 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 select-none cursor-pointer"
+              className="relative overflow-hidden cursor-pointer"
+              class="w-full bg-red-650 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 select-none"
             >
               <span id="btn-submit-text">🚀 إرسال الفاتورة عبر الواتساب</span>
             </button>
@@ -323,9 +326,15 @@
           <h2 class="font-bold text-base text-slate-900">سلة طلباتك الشهية</h2>
           <span id="mobile-drawer-count-badge" class="bg-red-100 text-red-700 text-xs font-extrabold font-mono px-2 py-0.5 rounded-full">0 وجبات</span>
         </div>
-        <button onclick="closeMobileDrawer()" class="p-1 px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full text-xs font-bold flex items-center gap-1 select-none cursor-pointer">
-          <span>إغلاق الملحق</span>
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button onclick="clearCart()" class="p-1.5 px-3.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-full text-[11px] font-bold flex items-center gap-1 select-none cursor-pointer transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>تصفير الفاتورة</span>
+          </button>
+          <button onclick="closeMobileDrawer()" class="p-1 px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full text-xs font-bold flex items-center gap-1 select-none cursor-pointer transition col-span-1">
+            <span>إغلاق</span>
+          </button>
+        </div>
       </div>
 
       <!-- Drawer Content Wrapper -->
@@ -361,7 +370,7 @@
             id="mob-form-name" 
             required 
             placeholder="👤 اسمك الكريم بالكامل..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <input 
@@ -369,21 +378,21 @@
             id="mob-form-address" 
             required 
             placeholder="📍 العنوان بدقة (الحارة، البناية، علامة قريبة)..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <input 
             type="tel" 
             id="mob-form-phone" 
             placeholder="📞 رقم الموبايل للاتصال بك (اختياري)..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <textarea 
             id="mob-form-notes" 
             rows="2" 
             placeholder="📝 هل لديك أي ملحوظات؟ (زيادة بصل، تخفيف توم، الخ...)" 
-            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20 resize-none"
+            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20 resize-none"
           ></textarea>
 
           <button 
@@ -411,6 +420,33 @@
     </div>
   </footer>
 
+  <!-- Custom Modern Custom Modals & Dialog alerts (Avoid standard blocking popups which crash/freeze WebViews) -->
+  <div id="custom-modal-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4">
+    <div id="custom-modal-box" class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-100 p-5 flex flex-col transition-all duration-300 scale-95 opacity-0 text-right" dir="rtl">
+      
+      <!-- Icon & Header description -->
+      <div class="flex items-center gap-3 border-b border-slate-100 pb-3 mb-3.5">
+        <div id="custom-modal-icon-container" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
+          <!-- SVG Icon placeholder -->
+        </div>
+        <div>
+          <h3 id="custom-modal-title" class="font-extrabold text-sm text-slate-900">تنبيه</h3>
+        </div>
+      </div>
+
+      <!-- Message contents -->
+      <p id="custom-modal-message" class="text-xs text-slate-600 leading-relaxed text-right mb-4 font-semibold"></p>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 justify-end mt-1">
+        <button id="custom-modal-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 cursor-pointer select-none transition">إلغاء</button>
+        <button id="custom-modal-confirm-btn" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-red-650 hover:bg-red-700 cursor-pointer select-none transition">تأكيد</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Code Logic Block containing the spreadsheet integration, custom calculation fixes, and UI interaction -->
   <script>
     // Configuration Settings
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
@@ -500,12 +536,95 @@
       }
     ];
 
-    // Reactive State Engine
-    let products = [];
-    let cart = {}; // key: product name::category, value: count
-    let currentCategory = "الكل";
-    let searchQuery = "";
-    let customerDetails = { name: "", address: "", phone: "", notes: "" };
+     // Reactive State Engine
+     let products = [];
+     let cart = {}; // key: product name, value: count
+     let currentCategory = "الكل";
+     let searchQuery = "";
+     let customerDetails = { name: "", address: "", phone: "", notes: "" };
+ 
+     // Promise-based modal dialog system that is completely mobile-friendly and non-blocking
+     let resolveModal = null;
+ 
+     function showCustomConfirm(title, message, isConfirmOnly = false, type = "warning") {
+       return new Promise((resolve) => {
+         resolveModal = resolve;
+         
+         const overlay = document.getElementById('custom-modal-overlay');
+         const box = document.getElementById('custom-modal-box');
+         const titleEl = document.getElementById('custom-modal-title');
+         const messageEl = document.getElementById('custom-modal-message');
+         const cancelBtn = document.getElementById('custom-modal-cancel-btn');
+         const confirmBtn = document.getElementById('custom-modal-confirm-btn');
+         const iconContainer = document.getElementById('custom-modal-icon-container');
+ 
+         // Set text
+         titleEl.innerText = title;
+         messageEl.innerText = message;
+ 
+         // Set aesthetics
+         if (type === "warning") {
+           iconContainer.className = "w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-amber-50 text-amber-600";
+           iconContainer.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+           confirmBtn.className = "px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 cursor-pointer select-none transition";
+         } else if (type === "error") {
+           iconContainer.className = "w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-50 text-red-600";
+           iconContainer.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+           confirmBtn.className = "px-5 py-2 rounded-xl text-xs font-bold text-white bg-red-650 hover:bg-red-700 cursor-pointer select-none transition";
+         } else {
+           iconContainer.className = "w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-blue-50 text-blue-600";
+           iconContainer.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+           confirmBtn.className = "px-5 py-2 rounded-xl text-xs font-bold text-white bg-red-650 hover:bg-red-700 cursor-pointer select-none transition";
+         }
+ 
+         if (isConfirmOnly) {
+           cancelBtn.classList.add('hidden');
+         } else {
+           cancelBtn.classList.remove('hidden');
+         }
+ 
+         // Show
+         overlay.classList.remove('hidden');
+         overlay.classList.add('flex');
+         
+         setTimeout(() => {
+           box.classList.remove('scale-95', 'opacity-0');
+           box.classList.add('scale-100', 'opacity-100');
+         }, 50);
+ 
+         // Click actions
+         cancelBtn.onclick = () => {
+           closeCustomModal(false);
+         };
+ 
+         confirmBtn.onclick = () => {
+           closeCustomModal(true);
+         };
+       });
+     }
+ 
+     function closeCustomModal(result) {
+       const overlay = document.getElementById('custom-modal-overlay');
+       const box = document.getElementById('custom-modal-box');
+       
+       box.classList.remove('scale-100', 'opacity-100');
+       box.classList.add('scale-95', 'opacity-0');
+       
+       setTimeout(() => {
+         overlay.classList.add('hidden');
+         overlay.classList.remove('flex');
+         if (resolveModal) resolveModal(result);
+       }, 200);
+     }
+ 
+     async function customAlert(message, title = "تنبيه") {
+       await showCustomConfirm(title, message, true, "info");
+     }
+ 
+     function escapeJSString(str) {
+       if (!str) return "";
+       return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+     }
 
     // Standard stable CSV parser matching App.tsx perfectly
     function parseCSV(text) {
@@ -629,6 +748,7 @@
         // Skip header
         const dataRows = rows.slice(1);
         const mappedList = dataRows.map((cols, idx) => {
+          // Robust Arithmetic Check matching original fixes
           const rawPrice = cols[1] || "";
           const cleanPrice = rawPrice.replace(/[^\d.]/g, '').trim();
           let parsedPrice = parseFloat(cleanPrice) || 0;
@@ -789,6 +909,7 @@
       const grid = document.getElementById('products-grid');
       const emptyState = document.getElementById('empty-state');
       
+      // Filter products
       const filtered = products.filter(p => {
         const matchCat = (currentCategory === "الكل" || p.cat === currentCategory);
         const search = searchQuery.toLowerCase().trim();
@@ -813,12 +934,15 @@
       filtered.forEach(p => {
         const currentQty = cart[p.name + "::" + p.cat] || 0;
         const formattedPrice = p.price.toLocaleString();
+        const safeName = escapeJSString(p.name);
+        const safeCat = escapeJSString(p.cat);
         
+        // Render single card
         html += `
           <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-200 transition duration-200 animate-fadeIn group relative">
             
             <!-- Food Thumbnail Image -->
-            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-100 flex-shrink-0 border border-slate-100/60 shadow-inner">
+            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-105 flex-shrink-0 border border-slate-100/60 shadow-inner">
               ${p.img ? `
                 <img 
                   src="${p.img}" 
@@ -829,18 +953,18 @@
                 />
               ` : ''}
               
-              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50" style="display: ${p.img ? 'none' : 'flex'}">
+              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50 ${p.img ? 'hidden' : 'flex'}" style="display: ${p.img ? 'none' : 'flex'}">
                 <svg class="w-7 h-7 mb-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 <span class="text-[9px] font-medium text-red-400">Friends 🍔</span>
               </div>
 
-              <!-- Inline Badge Category -->
+              <!-- Inline Badge Badge -->
               <div class="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
                 ${p.cat}
               </div>
             </div>
 
-            <!-- Content -->
+            <!-- Copywriting and Adders -->
             <div class="flex-1 flex flex-col justify-between py-0.5">
               <div>
                 <h3 class="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition leading-snug">
@@ -865,8 +989,8 @@
                 <!-- Circular counter increments -->
                 <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-full border border-slate-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] select-none">
                   <button 
-                    onclick="updateCartQty('${p.name}', '${p.cat}', -1)"
-                    class="w-7 h-7 rounded-full font-bold flex items-center justify-center cursor-pointer transition ${currentQty > 0 ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' : 'bg-transparent text-slate-300 pointer-events-none'}"
+                    onclick="updateCartQty('${safeName}', '${safeCat}', -1)"
+                    class="w-7.5 h-7.5 rounded-full font-bold flex items-center justify-center cursor-pointer transition w-7 h-7 ${currentQty > 0 ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' : 'bg-transparent text-slate-300 pointer-events-none'}"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                   </button>
@@ -876,7 +1000,7 @@
                   </span>
                   
                   <button 
-                    onclick="updateCartQty('${p.name}', '${p.cat}', 1)"
+                    onclick="updateCartQty('${safeName}', '${safeCat}', 1)"
                     class="w-7 h-7 rounded-full bg-red-650 hover:bg-red-700 text-white font-bold flex items-center justify-center cursor-pointer shadow-sm shadow-red-200 active:scale-95 transition"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -917,7 +1041,7 @@
       refreshUILayout();
     }
 
-    // Update Basket Quantity with specific Name and Category
+    // Update Basket Increment / Decrement Quantities
     function updateCartQty(name, cat, change) {
       const key = name + "::" + cat;
       const current = cart[key] || 0;
@@ -934,15 +1058,16 @@
       refreshUILayout();
     }
 
-    function clearCart() {
-      if (confirm("هل أنت متأكد من رغبتك في تفريغ سلة وجباتك؟")) {
+    async function clearCart() {
+      const confirmed = await showCustomConfirm("تصفير الفاتورة", "هل أنت متأكد من رغبتك في تفريغ سلة وجباتك بالكامل وعمل تصفير؟", false, "error");
+      if (confirmed) {
         cart = {};
         localStorage.setItem('friends_cart', JSON.stringify(cart));
         refreshUILayout();
       }
     }
 
-    // Statistics Calculations
+    // Calculations calculations statistics
     function getCartStatistics() {
       let totalPrice = 0;
       let totalItems = 0;
@@ -966,7 +1091,8 @@
             itemsList.push({
               product: matched,
               qty,
-              itemSum
+              itemSum,
+              storedCat: cat
             });
           }
         }
@@ -1002,6 +1128,8 @@
       const itemsContainer = document.getElementById('invoice-items');
       let html = "";
       stats.itemsList.forEach(item => {
+        const safeName = escapeJSString(item.product.name);
+        const safeCat = escapeJSString(item.storedCat);
         html += `
           <div class="flex justify-between items-start gap-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 text-xs">
             <div class="flex-1">
@@ -1012,11 +1140,11 @@
             </div>
             
             <div class="flex items-center gap-1.5 select-none pr-1">
-              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', -1)" class="w-5 h-5 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', -1)" class="w-5 h-5 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
               </button>
               <span class="font-mono font-bold text-slate-800 min-w-[12px] text-center">${item.qty}</span>
-              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', 1)" class="w-5 h-5 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', 1)" class="w-5 h-5 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               </button>
             </div>
@@ -1055,6 +1183,7 @@
       overlay.classList.remove('hidden');
       overlay.classList.add('flex');
       
+      // Render details
       const stats = getCartStatistics();
       document.getElementById('mobile-drawer-count-badge').innerText = `${stats.totalItems} وجبات`;
       document.getElementById('mobile-drawer-items-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
@@ -1063,6 +1192,8 @@
       const drawerItems = document.getElementById('mobile-drawer-items');
       let html = "";
       stats.itemsList.forEach(item => {
+        const safeName = escapeJSString(item.product.name);
+        const safeCat = escapeJSString(item.storedCat);
         html += `
           <div class="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
             <div class="flex-1">
@@ -1073,11 +1204,11 @@
             </div>
             
             <div class="flex items-center gap-2 select-none">
-              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-505 border border-slate-200 flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
               </button>
               <span class="font-mono font-bold text-slate-800 min-w-[14px] text-center">${item.qty}</span>
-              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               </button>
             </div>
@@ -1090,7 +1221,7 @@
       });
       drawerItems.innerHTML = html;
 
-      // Slide up
+      // Animate sliding up
       setTimeout(() => {
         drawer.classList.remove('translate-y-full');
         drawer.classList.add('translate-y-0');
@@ -1110,8 +1241,8 @@
       }, 250);
     }
 
-    // Submit and redirect to WhatsApp
-    function handleSendOrder(event, isMobileDrawer = false) {
+    // Submit and construct perfect responsive WhatsApp Redirect links
+    async function handleSendOrder(event, isMobileDrawer = false) {
       event.preventDefault();
       
       const name = isMobileDrawer 
@@ -1133,19 +1264,19 @@
       const stats = getCartStatistics();
 
       if (!name) {
-        alert("الرجاء إدخال اسم الزبون لتوصيل الطلب!");
+        await customAlert("الرجاء إدخال اسم الزبون لتوصيل الطلب!", "حقل مطلوب 👤");
         return;
       }
       if (!address) {
-        alert("الرجاء إدخال تفاصيل العنوان لتسهيل التوصيل!");
+        await customAlert("الرجاء إدخال تفاصيل العنوان (مثال: الشارع، بجوار المسجد، الطابق) لتسهيل التوصيل!", "حقل مطلوب 📍");
         return;
       }
       if (stats.itemsList.length === 0) {
-        alert("سلتك فارغة! الرجاء إضافة بعض الوجبات أولاً قبل إرسال الطلب.");
+        await customAlert("سلتك فارغة! الرجاء إضافة بعض الوجبات أولاً قبل إرسال الطلب.", "السلة فارغة 🛒");
         return;
       }
 
-      // Build recipe SMS-style text
+      // Build perfect responsive receipt text
       let msg = `*طلب جديد من المنيو الإلكتروني لمطعم فريندز 🍔📱*\n`;
       msg += `──────────────────────\n`;
       msg += `👤 *الزبون:* ${name}\n`;
@@ -1170,11 +1301,11 @@
       msg += `──────────────────────\n`;
       msg += `🍔 *شكرًا لاختياركم مطعم Friends! سنصنع طلبكم بأفضل المكونات ونؤكده معكم بكل سرور.*`;
 
-      // Redirect link to WhatsApp
+      // Redirect link
       const encoded = encodeURIComponent(msg);
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
       
-      // Update Button state
+      // Update Button State to show Success trigger
       const submitBtn = isMobileDrawer 
         ? document.querySelector('#mobile-drawer-form button[type="submit"]')
         : document.querySelector('#checkout-form button[type="submit"]');
@@ -1193,7 +1324,20 @@
         submitBtn.style.backgroundColor = ""; 
       }, 3000);
 
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // Open tab securely with direct location.href on mobile devices to prevent browser freeze/popup blockers
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobileDevice) {
+        window.location.href = url;
+      } else {
+        try {
+          const opened = window.open(url, '_blank', 'noopener,noreferrer');
+          if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+            window.location.href = url;
+          }
+        } catch (e) {
+          window.location.href = url;
+        }
+      }
     }
   </script>
 </body>
