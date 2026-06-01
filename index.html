@@ -36,9 +36,28 @@
                 const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
                 const csv = await res.text();
                 
+                // التعديل الجديد لقراءة الأسطر والأعمدة بشكل صحيح وضمان سلامة حساب الأسعار
                 rawProducts = csv.split('\n').slice(1).map((row, index) => {
-                    const regex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g;
-                    const cols = row.match(regex)?.map(c => c.replace(/"/g, '').trim()) || [];
+                    const cleanRow = row.replace(/\r/g, '').trim();
+                    if (!cleanRow) return {};
+
+                    const cols = [];
+                    let insideQuote = false;
+                    let current = '';
+
+                    for (let i = 0; i < cleanRow.length; i++) {
+                        let char = cleanRow[i];
+                        if (char === '"') {
+                            insideQuote = !insideQuote;
+                        } else if (char === ',' && !insideQuote) {
+                            cols.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    cols.push(current.trim());
+
                     return { 
                         id: index,
                         name: cols[0], 
@@ -89,7 +108,6 @@
         function updateQty(name, change) {
             cart[name] = Math.max(0, (cart[name] || 0) + change);
             
-            // تحديث الرقم على الشاشة فقط إذا كان العنصر معروضاً حالياً
             const product = rawProducts.find(p => p.name === name);
             if (product) {
                 const qtyElement = document.getElementById(`qty-${product.id}`);
@@ -98,7 +116,6 @@
                 }
             }
             
-            // حساب المجموع الكلي الجديد
             let total = 0;
             rawProducts.forEach(p => { 
                 if(cart[p.name]) total += p.price * cart[p.name]; 
