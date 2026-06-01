@@ -441,6 +441,10 @@
       <div class="flex gap-2 justify-end mt-1">
         <button id="custom-modal-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 cursor-pointer select-none transition">إلغاء</button>
         <button id="custom-modal-confirm-btn" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-red-650 hover:bg-red-700 cursor-pointer select-none transition">تأكيد</button>
+        <a id="custom-modal-link-btn" target="_blank" rel="noopener noreferrer" class="hidden px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 cursor-pointer text-center select-none transition flex items-center justify-center gap-1.5 animate-pulse">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.004 0C5.378 0 .004 5.372.004 12c0 2.112.551 4.167 1.596 5.975L.055 24l6.19-1.623c1.745.952 3.71 1.455 5.753 1.455 6.626 0 12-5.374 12-12s-5.372-12-12-12zm6.216 17.062c-.263.376-1.53 1.53-2.095 1.595-.563.064-1.127.127-3.125-.668-2.518-1-4.14-3.565-4.266-3.733-.127-.167-.936-1.246-.936-2.38 0-1.134.593-1.684.805-1.905.213-.223.504-.286.716-.286.213 0 .425-.01.616.004.197.014.446-.073.69-.661.264-.637.904-2.195.983-2.353.079-.158.132-.344.027-.557-.107-.213-.48-.68-.72-.977-.243-.298-.49-.611-.702-.611-.212 0-.424.01-.615.01-.192 0-.616.073-.913.396-.298.324-1.137 1.11-1.137 2.709s1.157 3.138 1.316 3.35c.159.213 2.278 3.479 5.519 4.88.77.333 1.373.533 1.84.681.776.246 1.482.211 2.04.127.622-.093 1.913-.782 2.183-1.498.27-.717.27-1.33.19-1.458-.08-.128-.293-.207-.611-.366z"/></svg>
+          <span>تأكيد وإرسال عبر الواتساب</span>
+        </a>
       </div>
 
     </div>
@@ -544,9 +548,62 @@
      let customerDetails = { name: "", address: "", phone: "", notes: "" };
  
      // Promise-based modal dialog system that is completely mobile-friendly and non-blocking
-     let resolveModal = null;
+           let resolveModal = null;
+
+      function showWhatsAppRedirectModal(title, message, url) {
+        return new Promise((resolve) => {
+          resolveModal = resolve;
+          
+          const overlay = document.getElementById('custom-modal-overlay');
+          const box = document.getElementById('custom-modal-box');
+          const titleEl = document.getElementById('custom-modal-title');
+          const messageEl = document.getElementById('custom-modal-message');
+          const cancelBtn = document.getElementById('custom-modal-cancel-btn');
+          const confirmBtn = document.getElementById('custom-modal-confirm-btn');
+          const linkBtn = document.getElementById('custom-modal-link-btn');
+          const iconContainer = document.getElementById('custom-modal-icon-container');
+
+          // Set text
+          titleEl.innerText = title;
+          messageEl.innerText = message;
+
+          // Set aesthetics
+          iconContainer.className = "w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-50 text-emerald-600";
+          iconContainer.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.004 0C5.378 0 .004 5.372.004 12c0 2.112.551 4.167 1.596 5.975L.055 24l6.19-1.623c1.745.952 3.71 1.455 5.753 1.455 6.626 0 12-5.374 12-12s-5.372-12-12-12zm6.216 17.062c-.263.376-1.53 1.53-2.095 1.595-.563.064-1.127.127-3.125-.668-2.518-1-4.14-3.565-4.266-3.733-.127-.167-.936-1.246-.936-2.38 0-1.134.593-1.684.805-1.905.213-.223.504-.286.716-.286.213 0 .425-.01.616.004.197.014.446-.073.69-.661.264-.637.904-2.195.983-2.353.079-.158.132-.344.027-.557-.107-.213-.48-.68-.72-.977-.243-.298-.49-.611-.702-.611-.212 0-.424.01-.615.01-.192 0-.616.073-.913.396-.298.324-1.137 1.11-1.137 2.709s1.157 3.138 1.316 3.35c.159.213 2.278 3.479 5.519 4.88.77.333 1.373.533 1.84.681.776.246 1.482.211 2.04.127.622-.093 1.913-.782 2.183-1.498.27-.717.27-1.33.19-1.458-.08-.128-.293-.207-.611-.366z"/></svg>`;
+
+          confirmBtn.classList.add('hidden');
+          linkBtn.classList.remove('hidden');
+          cancelBtn.classList.remove('hidden');
+
+          linkBtn.href = url;
+
+          // Show
+          overlay.classList.remove('hidden');
+          overlay.classList.add('flex');
+          
+          setTimeout(() => {
+            box.classList.remove('scale-95', 'opacity-0');
+            box.classList.add('scale-100', 'opacity-100');
+          }, 50);
+
+          // Click actions
+          cancelBtn.onclick = () => {
+            closeCustomModal(false);
+          };
+
+          linkBtn.onclick = () => {
+            setTimeout(() => {
+              closeCustomModal(true);
+            }, 300);
+          };
+        });
+      }
  
      function showCustomConfirm(title, message, isConfirmOnly = false, type = "warning") {
+       const lb = document.getElementById('custom-modal-link-btn');
+       const cb = document.getElementById('custom-modal-confirm-btn');
+       if (lb) lb.classList.add('hidden');
+       if (cb) cb.classList.remove('hidden');
        return new Promise((resolve) => {
          resolveModal = resolve;
          
@@ -859,6 +916,7 @@
       renderProducts();
       renderCartInvoice();
       renderMobileStickyDock();
+      renderMobileDrawer();
     }
 
     // Render Categories horizontal filter
@@ -1175,21 +1233,20 @@
       }
     }
 
-    // Open detailed checkout drawer on phones
-    function scrollToCheckoutForm() {
-      const overlay = document.getElementById('mobile-drawer-overlay');
-      const drawer = document.getElementById('mobile-drawer-content');
-      
-      overlay.classList.remove('hidden');
-      overlay.classList.add('flex');
-      
-      // Render details
+    // Render Mobile Detailed Drawer Content (Re-rendered on any qty update!)
+    function renderMobileDrawer() {
       const stats = getCartStatistics();
-      document.getElementById('mobile-drawer-count-badge').innerText = `${stats.totalItems} وجبات`;
-      document.getElementById('mobile-drawer-items-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
-      document.getElementById('mobile-drawer-total-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
-      
+      const badge = document.getElementById('mobile-drawer-count-badge');
+      const itemsCost = document.getElementById('mobile-drawer-items-cost');
+      const totalCost = document.getElementById('mobile-drawer-total-cost');
       const drawerItems = document.getElementById('mobile-drawer-items');
+
+      if (badge) badge.innerText = `${stats.totalItems} وجبات`;
+      if (itemsCost) itemsCost.innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+      if (totalCost) totalCost.innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
+      
+      if (!drawerItems) return;
+      
       let html = "";
       stats.itemsList.forEach(item => {
         const safeName = escapeJSString(item.product.name);
@@ -1204,11 +1261,11 @@
             </div>
             
             <div class="flex items-center gap-2 select-none">
-              <button onclick="updateCartQty('${safeName}', '${safeCat}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
               </button>
               <span class="font-mono font-bold text-slate-800 min-w-[14px] text-center">${item.qty}</span>
-              <button onclick="updateCartQty('${safeName}', '${safeCat}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${safeName}', '${safeCat}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               </button>
             </div>
@@ -1220,6 +1277,18 @@
         `;
       });
       drawerItems.innerHTML = html;
+    }
+
+    // Open detailed checkout drawer on phones
+    function scrollToCheckoutForm() {
+      const overlay = document.getElementById('mobile-drawer-overlay');
+      const drawer = document.getElementById('mobile-drawer-content');
+      
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+      
+      // Render details
+      renderMobileDrawer();
 
       // Animate sliding up
       setTimeout(() => {
@@ -1322,22 +1391,14 @@
       setTimeout(() => {
         submitBtn.innerHTML = oldHTML;
         submitBtn.style.backgroundColor = ""; 
-      }, 3000);
+      }, 4000);
 
-      // Open tab securely with direct location.href on mobile devices to prevent browser freeze/popup blockers
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobileDevice) {
-        window.location.href = url;
-      } else {
-        try {
-          const opened = window.open(url, '_blank', 'noopener,noreferrer');
-          if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-            window.location.href = url;
-          }
-        } catch (e) {
-          window.location.href = url;
-        }
-      }
+      // Open a beautiful, mobile-friendly dialog with a direct green WhatsApp button to bypass iframe blocks and popup blockers
+      showWhatsAppRedirectModal(
+        "فاتورتك جاهزة للتأكيد! 🧾🍔",
+        `تم تجهيز طلبك اللذيذ بنجاح وبقيمة إجمالية قدرها ${stats.totalPrice.toLocaleString()} ل.س. اضغط على الزر الأخضر أدناه لفتح تطبيق الواتساب وإرسال الفاتورة لتأكيد طلبك وتوصيله!`,
+        url
+      );
     }
   </script>
 </body>
