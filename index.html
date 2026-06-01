@@ -1,161 +1,986 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مطعم Friends</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 text-gray-800 pb-40">
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect, useMemo, useRef, ChangeEvent, FormEvent } from 'react';
+import { 
+  Search, 
+  ShoppingBag, 
+  MapPin, 
+  User, 
+  Plus, 
+  Minus, 
+  Trash2, 
+  Phone, 
+  Utensils, 
+  Check, 
+  Loader2, 
+  Wifi, 
+  WifiOff, 
+  AlertCircle, 
+  X, 
+  MessageSquare,
+  Clock
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Product, Cart, OrderDetails } from './types';
+import { FALLBACK_PRODUCTS } from './data/fallbackData';
+
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
+const WHATSAPP_NUMBER = "963955929797";
+const RESTAURANT_PHONE = "0116712121";
+
+// Custom CSV Parser that handles double quotes, commas within quotes, empty fields, and preserves all columns precisely
+function parseCSV(text: string): string[][] {
+  const lines: string[][] = [];
+  const rows = text.split(/\r?\n/);
+  
+  for (const row of rows) {
+    if (!row.trim()) continue;
     
-    <div class="bg-red-700 text-white text-center py-6 px-4 rounded-b-2xl shadow-md">
-        <h1 class="text-2xl font-bold">🍔 مطعم Friends</h1>
-        <p class="text-sm opacity-90">صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم</p>
-        <p class="text-xs mt-1">هاتف: 0116712121 | واتساب: 0955929797</p>
-    </div>
-
-    <div class="sticky top-0 bg-gray-50 z-10 p-4 shadow-sm">
-        <input type="text" id="search" oninput="render()" placeholder="🔍 ابحث عن وجبة..." class="w-full p-3 rounded-xl border border-gray-200 mb-3 focus:outline-none focus:ring-2 focus:ring-red-500">
-        <div id="filters" class="flex gap-2 overflow-x-auto pb-2"></div>
-    </div>
-
-    <div id="products-list" class="p-4 grid grid-cols-1 gap-3"></div>
-
-    <div class="fixed bottom-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-5px_10px_rgba(0,0,0,0.1)] z-20">
-        <input type="text" id="client-name" placeholder="👤 اسم الزبون..." class="w-full p-2 mb-1 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
-        <input type="text" id="client-address" placeholder="📍 العنوان بالتفصيل..." class="w-full p-2 mb-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-500">
-        <button onclick="sendOrder()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md">🚀 إرسال الطلب عبر الواتساب (<span id="cart-total">0</span> ل.س)</button>
-    </div>
-
-    <script>
-        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
-        let rawProducts = [], cart = {}, currentCat = "الكل";
-
-        async function init() {
-            try {
-                const res = await fetch(SHEET_URL + "&t=" + new Date().getTime());
-                const csv = await res.text();
-                
-                // التعديل الجديد لقراءة الأسطر والأعمدة بشكل صحيح وضمان سلامة حساب الأسعار
-                rawProducts = csv.split('\n').slice(1).map((row, index) => {
-                    const cleanRow = row.replace(/\r/g, '').trim();
-                    if (!cleanRow) return {};
-
-                    const cols = [];
-                    let insideQuote = false;
-                    let current = '';
-
-                    for (let i = 0; i < cleanRow.length; i++) {
-                        let char = cleanRow[i];
-                        if (char === '"') {
-                            insideQuote = !insideQuote;
-                        } else if (char === ',' && !insideQuote) {
-                            cols.push(current.trim());
-                            current = '';
-                        } else {
-                            current += char;
-                        }
-                    }
-                    cols.push(current.trim());
-
-                    return { 
-                        id: index,
-                        name: cols[0], 
-                        price: parseFloat(cols[1]) || 0, 
-                        cat: cols[2] || "أخرى", 
-                        desc: cols[3] || '', 
-                        img: cols[4] || '' 
-                    };
-                }).filter(p => p.name);
-                
-                renderFilters();
-                render();
-            } catch(e) { 
-                console.error("خطأ في تحميل البيانات: ", e); 
-            }
+    const cols: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') {
+        if (inQuotes && row[i + 1] === '"') {
+          current += '"';
+          i++; // skip next escaped quote
+        } else {
+          inQuotes = !inQuotes;
         }
+      } else if (char === ',' && !inQuotes) {
+        cols.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    cols.push(current.trim());
+    lines.push(cols);
+  }
+  
+  return lines;
+}
 
-        function renderFilters() {
-            const cats = ["الكل", ...new Set(rawProducts.map(p => p.cat))];
-            document.getElementById('filters').innerHTML = cats.map(c => 
-                `<button onclick="currentCat='${c}'; renderFilters(); render()" class="px-4 py-1 rounded-full whitespace-nowrap transition duration-200 ${currentCat==c?'bg-red-600 text-white shadow-sm':'bg-white border text-gray-600'}">${c}</button>`
-            ).join('');
-        }
+export default function App() {
+  // Application States
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<Cart>(() => {
+    const savedCart = localStorage.getItem('friends_cart');
+    return savedCart ? JSON.parse(savedCart) : {};
+  });
+  const [currentCat, setCurrentCat] = useState<string>("الكل");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dataSource, setDataSource] = useState<"sheets" | "cache" | "fallback">("fallback");
+  const [lastFetched, setLastFetched] = useState<string | null>(null);
+  
+  // Checkout & Order Form
+  const [orderDetails, setOrderDetails] = useState<OrderDetails>(() => {
+    const savedDetails = localStorage.getItem('friends_order_details');
+    return savedDetails ? JSON.parse(savedDetails) : { name: "", address: "", phone: "", notes: "" };
+  });
 
-        function render() {
-            const search = document.getElementById('search').value.toLowerCase();
-            const list = rawProducts.filter(p => (currentCat=="الكل" || p.cat==currentCat) && p.name.toLowerCase().includes(search));
-            
-            document.getElementById('products-list').innerHTML = list.map((p) => {
-                const currentQty = cart[p.name] || 0;
-                return `
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
-                    <img src="${p.img}" class="w-20 h-20 rounded-lg object-cover bg-gray-100" onerror="this.src='https://via.placeholder.com/150'">
-                    <div class="flex-1">
-                        <h3 class="font-bold text-sm text-gray-900">${p.name}</h3>
-                        <p class="text-gray-500 text-[11px] my-1 leading-tight">${p.desc}</p>
-                        <p class="text-red-600 font-bold text-sm">${p.price.toLocaleString()} <span class="text-[10px]">ل.س</span></p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="updateQty('${p.name}', -1)" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-lg flex items-center justify-center text-gray-600">-</button>
-                        <span id="qty-${p.id}" class="font-bold w-6 text-center text-sm">${currentQty}</span>
-                        <button onclick="updateQty('${p.name}', 1)" class="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white font-bold text-lg flex items-center justify-center">+</button>
-                    </div>
-                </div>
-            `}).join('');
-        }
+  // UI Control states
+  const [showCartDrawer, setShowCartDrawer] = useState<boolean>(false);
+  const [orderSent, setOrderSent] = useState<boolean>(false);
+  const [imageErrors, setImageErrors] = useState<Record<string | number, boolean>>({});
+  
+  const bottomFormRef = useRef<HTMLDivElement>(null);
 
-        function updateQty(name, change) {
-            cart[name] = Math.max(0, (cart[name] || 0) + change);
-            
-            const product = rawProducts.find(p => p.name === name);
-            if (product) {
-                const qtyElement = document.getElementById(`qty-${product.id}`);
-                if (qtyElement) {
-                    qtyElement.innerText = cart[name];
-                }
-            }
-            
-            let total = 0;
-            rawProducts.forEach(p => { 
-                if(cart[p.name]) total += p.price * cart[p.name]; 
-            });
-            document.getElementById('cart-total').innerText = total.toLocaleString();
-        }
+  // Sync cart & user details to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('friends_cart', JSON.stringify(cart));
+  }, [cart]);
 
-        function sendOrder() {
-            const name = document.getElementById('client-name').value.trim();
-            const address = document.getElementById('client-address').value.trim();
-            
-            if(!name || !address) return alert("يرجى كتابة الاسم والعنوان بالكامل لتوصيل الطلب!");
-            
-            let hasItems = false;
-            let msg = `*طلب جديد من المنيو الإلكتروني 📱*\n`;
-            msg += `─────────────────\n`;
-            msg += `👤 *الزبون:* ${name}\n`;
-            msg += `📍 *العنوان:* ${address}\n`;
-            msg += `─────────────────\n\n`;
-            msg += `🛒 *الطلبات:* \n`;
-            
-            let total = 0;
-            rawProducts.forEach(p => { 
-                if(cart[p.name] > 0) {
-                    hasItems = true;
-                    const itemTotal = p.price * cart[p.name];
-                    total += itemTotal;
-                    msg += `• ${p.name}\n  ${cart[p.name]} × ${p.price.toLocaleString()} = *${itemTotal.toLocaleString()} ل.س*\n\n`;
-                } 
-            });
-            
-            if(!hasItems) return alert("سلتك فارغة! يرجى إضافة وجبات أولاً.");
-            
-            msg += `─────────────────\n`;
-            msg += `💰 *الحساب الإجمالي:* *${total.toLocaleString()} ل.س*`;
-            
-            window.open(`https://wa.me/963955929797?text=${encodeURIComponent(msg)}`);
-        }
+  useEffect(() => {
+    localStorage.setItem('friends_order_details', JSON.stringify(orderDetails));
+  }, [orderDetails]);
+
+  // Load Menu Dataset
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const res = await fetch(`${SHEET_URL}&t=${new Date().getTime()}`);
+        if (!res.ok) throw new Error("فشلت عملية التحميل من السيرفر المباشر");
         
-        init();
-    </script>
-</body>
-</html>
+        const csvRawText = await res.text();
+        const parsedRows = parseCSV(csvRawText);
+        
+        // Skip header row and map
+        const dataRows = parsedRows.slice(1);
+        const fetchedProducts: Product[] = dataRows
+          .map((cols, idx) => {
+            const rawPriceStr = cols[1] || "";
+            const cleanPriceStr = rawPriceStr.replace(/[^\d.]/g, '').trim();
+            const numericPrice = parseFloat(cleanPriceStr) || 0;
+
+            const name = cols[0] || "";
+            const cat = cols[2] || "أخرى";
+            const desc = cols[3] || "";
+            const img = cols[4] || "";
+
+            return {
+              id: `sheet-${idx}`,
+              name,
+              price: numericPrice,
+              cat,
+              desc,
+              img
+            };
+          })
+          .filter(p => p.name.trim().length > 0);
+
+        if (fetchedProducts.length === 0) {
+          throw new Error("لم يتم العثور على أي وجبات صالحة في جدول البيانات.");
+        }
+
+        setProducts(fetchedProducts);
+        setDataSource("sheets");
+        const fetchTime = new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' });
+        setLastFetched(fetchTime);
+        
+        // Cache in LocalStorage
+        localStorage.setItem('friends_menu_cache', JSON.stringify(fetchedProducts));
+        localStorage.setItem('friends_menu_last_fetch', fetchTime);
+      } catch (err) {
+        console.warn("خطأ في جلب المنيو المباشر، جاري محاولة تحميل النسخة المخزنة مؤقتاً:", err);
+        
+        // Attempt to load from cache
+        const cachedMenu = localStorage.getItem('friends_menu_cache');
+        const cachedTime = localStorage.getItem('friends_menu_last_fetch');
+        
+        if (cachedMenu) {
+          try {
+            setProducts(JSON.parse(cachedMenu));
+            setDataSource("cache");
+            setLastFetched(cachedTime);
+          } catch {
+            setProducts(FALLBACK_PRODUCTS);
+            setDataSource("fallback");
+          }
+        } else {
+          setProducts(FALLBACK_PRODUCTS);
+          setDataSource("fallback");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, []);
+
+  // Compute Categories from products dynamically
+  const categoriesList = useMemo(() => {
+    if (products.length === 0) return ["الكل"];
+    const uniqueCats = Array.from(new Set(products.map(p => p.cat).filter(Boolean)));
+    return ["الكل", ...uniqueCats];
+  }, [products]);
+
+  // Support Search / Category Filter
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchCat = currentCat === "الكل" || p.cat === currentCat;
+      const cleanSearch = searchQuery.toLowerCase().trim();
+      const matchSearch = !cleanSearch || 
+        p.name.toLowerCase().includes(cleanSearch) || 
+        (p.desc && p.desc.toLowerCase().includes(cleanSearch)) ||
+        p.cat.toLowerCase().includes(cleanSearch);
+      return matchCat && matchSearch;
+    });
+  }, [products, currentCat, searchQuery]);
+
+  // Compute total counts per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { "الكل": products.length };
+    products.forEach(p => {
+      counts[p.cat] = (counts[p.cat] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  // Update Cart Quantity
+  const updateQty = (name: string, change: number) => {
+    setCart(prev => {
+      const currentQty = prev[name] || 0;
+      const newQty = Math.max(0, currentQty + change);
+      
+      const newCart = { ...prev };
+      if (newQty === 0) {
+        delete newCart[name];
+      } else {
+        newCart[name] = newQty;
+      }
+      return newCart;
+    });
+  };
+
+  // Clear entire cart
+  const clearCart = () => {
+    setCart({});
+  };
+
+  // Calculate Subtotal & Grand Total with precision
+  const cartStatistics = useMemo(() => {
+    let totalPrice = 0;
+    let totalItems = 0;
+    const itemsList: Array<{ product: Product; qty: number; itemSum: number }> = [];
+
+    // Map cart items against our current loaded products list
+    Object.entries(cart).forEach(([name, val]) => {
+      const qty = Number(val);
+      const matchedProduct = products.find(p => p.name === name);
+      if (matchedProduct && qty > 0) {
+        const itemSum = matchedProduct.price * qty;
+        totalPrice += itemSum;
+        totalItems += qty;
+        itemsList.push({
+          product: matchedProduct,
+          qty,
+          itemSum
+        });
+      }
+    });
+
+    return {
+      totalPrice,
+      totalItems,
+      itemsList
+    };
+  }, [cart, products]);
+
+  // Form input handler
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setOrderDetails(prev => ({
+      ...prev,
+      [id.replace('client-', '')]: value
+    }));
+  };
+
+  // Trigger WhatsApp Message Send
+  const handleSendOrder = (e: FormEvent) => {
+    e.preventDefault();
+    
+    const { name, address, phone, notes } = orderDetails;
+    if (!name.trim()) {
+      alert("الرجاء إدخال اسم الزبون لتوصيل الطلب!");
+      return;
+    }
+    if (!address.trim()) {
+      alert("الرجاء إدخال تفاصيل العنوان (مثال: الشارع، بجوار المسجد، الطابق) لتسهيل التوصيل!");
+      return;
+    }
+    if (cartStatistics.itemsList.length === 0) {
+      alert("سلتك فارغة! الرجاء إضافة بعض الوجبات أولاً قبل إرسال الطلب.");
+      return;
+    }
+
+    // Build perfect interactive invoice text
+    let msg = `*طلب جديد من المنيو الإلكتروني لمطعم فريندز 🍔📱*\n`;
+    msg += `──────────────────────\n`;
+    msg += `👤 *الزبون:* ${name.trim()}\n`;
+    msg += `📍 *العنوان:* ${address.trim()}\n`;
+    if (phone && phone.trim()) {
+      msg += `📞 *رقم الاتصال:* ${phone.trim()}\n`;
+    }
+    if (notes && notes.trim()) {
+      msg += `📝 *ملاحظات:* ${notes.trim()}\n`;
+    }
+    msg += `──────────────────────\n\n`;
+    msg += `🛒 *الطلبات المحددة:* \n\n`;
+
+    cartStatistics.itemsList.forEach((item, index) => {
+      msg += `${index + 1}. *${item.product.name}*\n`;
+      msg += `   الكمية: ${item.qty} × ${item.product.price.toLocaleString()} ل.س\n`;
+      msg += `   المجموع: *${item.itemSum.toLocaleString()} ل.س*\n\n`;
+    });
+
+    msg += `──────────────────────\n`;
+    msg += `💰 *الحساب الإجمالي للفاتورة:* *${cartStatistics.totalPrice.toLocaleString()} ل.س*\n`;
+    msg += `──────────────────────\n`;
+    msg += `🍔 *شكرًا لاختياركم مطعم Friends! سنصنع طلبكم بأفضل المكونات ونؤكده معكم بكل سرور.*`;
+
+    // URI encoding and redirection
+    const encodedText = encodeURIComponent(msg);
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedText}`;
+    
+    // Smooth order state
+    setOrderSent(true);
+    setTimeout(() => setOrderSent(false), 3000);
+    
+    // Open in new tab securely
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Scroll smoothly to checkout form
+  const scrollToCheckout = () => {
+    setShowCartDrawer(true);
+    setTimeout(() => {
+      bottomFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
+  };
+
+  // Quick reload function to manually fetch live Sheet
+  const handleManualRefresh = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${SHEET_URL}&t=${new Date().getTime()}`);
+      if (!res.ok) throw new Error("فشلت الاستجابة المباشرة");
+      const csvRawText = await res.text();
+      const parsedRows = parseCSV(csvRawText);
+      const dataRows = parsedRows.slice(1);
+      
+      const fetchedProducts: Product[] = dataRows
+        .map((cols, idx) => {
+          const rawPriceStr = cols[1] || "";
+          const cleanPriceStr = rawPriceStr.replace(/[^\d.]/g, '').trim();
+          const numericPrice = parseFloat(cleanPriceStr) || 0;
+
+          return {
+            id: `sheet-${idx}`,
+            name: cols[0] || "",
+            price: numericPrice,
+            cat: cols[2] || "أخرى",
+            desc: cols[3] || "",
+            img: cols[4] || ""
+          };
+        })
+        .filter(p => p.name.trim().length > 0);
+
+      if (fetchedProducts.length > 0) {
+        setProducts(fetchedProducts);
+        setDataSource("sheets");
+        const fetchTime = new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' });
+        setLastFetched(fetchTime);
+        localStorage.setItem('friends_menu_cache', JSON.stringify(fetchedProducts));
+        localStorage.setItem('friends_menu_last_fetch', fetchTime);
+      }
+    } catch (e) {
+      alert("تعذر تحديث البيانات من جدول البيانات حاليًا. تم اعتماد المنيو المحفوظ محليًا.");
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col pb-36 font-sans relative antialiased" dir="rtl">
+      
+      {/* Upper Status Bar - Technical Resilience Details */}
+      <div className="bg-slate-900 text-[11px] text-slate-400 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 font-mono">
+        <div className="flex items-center gap-1.5">
+          {dataSource === "sheets" && (
+            <span className="flex items-center gap-1 text-emerald-400">
+              <Wifi className="w-3.5 h-3.5" />
+              <span>مباشر من جوجل شيتس (آمن ولحظي)</span>
+            </span>
+          )}
+          {dataSource === "cache" && (
+            <span className="flex items-center gap-1 text-amber-400">
+              <Clock className="w-3.5 h-3.5" />
+              <span>منيو مخبأ محلياً (سرعة إضافية مفعّلة)</span>
+            </span>
+          )}
+          {dataSource === "fallback" && (
+            <span className="flex items-center gap-1 text-sky-400">
+              <WifiOff className="w-3.5 h-3.5" />
+              <span>مستودع محلي آمن ومثالي للتحمل</span>
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {lastFetched && (
+            <span>آخر تحديث: {lastFetched}</span>
+          )}
+          <button 
+            onClick={handleManualRefresh}
+            disabled={loading}
+            className="text-white hover:text-red-400 font-sans cursor-pointer transition flex items-center gap-1 text-[11px]"
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "🔁 تحديث قسري"}
+          </button>
+        </div>
+      </div>
+
+      {/* Hero Header Presentation */}
+      <header className="relative overflow-hidden bg-gradient-to-b from-red-800 to-red-650 text-white shadow-lg pt-8 pb-10 px-4">
+        {/* Abstract decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-red-900/40 rounded-full -ml-16 -mb-16 blur-xl pointer-events-none" />
+
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="inline-flex p-3 bg-white/10 backdrop-blur-md rounded-2xl mb-4 border border-white/20 shadow-inner"
+          >
+            <span className="text-4xl">🍔</span>
+          </motion.div>
+          
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-sm font-sans mb-2">
+            مطعم Friends
+          </h1>
+          
+          <p className="text-red-100 text-sm max-w-lg mx-auto leading-relaxed mb-4 font-sans font-light">
+            صحنايا - ساحة الأزروني - دخلة حلويات سليم أبناء العم
+          </p>
+          
+          {/* Action pills */}
+          <div className="flex justify-center flex-wrap gap-2.5 mt-2">
+            <a 
+              href={`tel:${RESTAURANT_PHONE}`}
+              className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all text-xs font-semibold flex items-center gap-1.5 border border-white/10 hover:scale-[1.02]"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>اتصل بنا: 0116712121</span>
+            </a>
+            
+            <a 
+              href={`https://wa.me/${WHATSAPP_NUMBER}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="px-3.5 py-1.5 rounded-full bg-emerald-600/90 hover:bg-emerald-600 transition-all text-xs font-semibold flex items-center gap-1.5 shadow-md border border-emerald-500/30 hover:scale-[1.02]"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>واتساب: 0955929797</span>
+            </a>
+
+            <div className="px-3.5 py-1.5 rounded-full bg-red-900/50 text-xs flex items-center gap-1.5 border border-red-800/30">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>التوصيل مجاني لجميع مناطق صحنايا 🤩</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Core Section */}
+      <main className="max-w-6xl w-full mx-auto p-4 flex-1 flex flex-col md:flex-row gap-6">
+        
+        {/* Products explorer and category navigation column */}
+        <div className="flex-1">
+          
+          {/* Floating Category and Search Area */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-6 sticky top-2 z-30 backdrop-blur-md bg-white/95">
+            {/* Search inputs */}
+            <div className="relative mb-4">
+              <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                <Search className="w-5 h-5" />
+              </span>
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 ابحث عن وجبة شهية... شاورما، كريسبي، برجر"
+                className="w-full pr-10 pl-10 py-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-4 focus:ring-red-100 transition duration-200 outline-none text-sm placeholder:text-slate-400 bg-slate-50/50"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Scrollable categories menu */}
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none scroll-smooth">
+              {categoriesList.map((cat) => {
+                const count = categoryCounts[cat] || 0;
+                const isSelected = currentCat === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setCurrentCat(cat);
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition duration-205 cursor-pointer ${
+                      isSelected 
+                        ? 'bg-red-600 text-white shadow-md shadow-red-200 hover:bg-red-700' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className={`mr-1 px-1.5 py-0.2 rounded-full text-[10px] ${isSelected ? 'bg-red-800 text-red-100' : 'bg-slate-200 text-slate-500'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Fallback & Data warning indicator block */}
+          {dataSource === "fallback" && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <p>
+                تم تفعيل وضع مقاومة انقطاع الخدمة: المنيو يعرض الأن قاعدة بيانات فريندز المحلية السريعة للتوصيل الآمن وحساب الفاتورة بدقة 100%.
+              </p>
+            </div>
+          )}
+
+          {/* Loading Indicator */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <Loader2 className="w-10 h-10 animate-spin text-red-650 mb-3" />
+              <p className="text-slate-500 text-sm font-medium">جاري تحديث وتجهيز المنيو الفوري بمقاييس دقيقة...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AnimatePresence>
+                {filteredProducts.map((p) => {
+                  const currentQty = cart[p.name] || 0;
+                  const hasImageError = imageErrors[p.id];
+
+                  // Formatter for accurate Syrian Pound Display
+                  const formattedPrice = p.price.toLocaleString();
+
+                  return (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.2 }}
+                      key={p.id}
+                      className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-250 transition-all duration-200 group relative"
+                    >
+                      {/* Product thumbnail image with customized food icon fallback */}
+                      <div className="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-100 flex-shrink-0 border border-slate-100 shadow-inner">
+                        {p.img && !hasImageError ? (
+                          <img 
+                            src={p.img} 
+                            alt={p.name}
+                            referrerPolicy="no-referrer"
+                            onError={() => setImageErrors(prev => ({ ...prev, [p.id]: true }))}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-350"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-red-500/80 bg-red-50/50">
+                            <Utensils className="w-7 h-7 mb-1" />
+                            <span className="text-[9px] font-medium text-red-400"> Friends 🍔</span>
+                          </div>
+                        )}
+                        
+                        {/* Food badge inside card image */}
+                        <div className="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
+                          {p.cat}
+                        </div>
+                      </div>
+
+                      {/* Product copy details */}
+                      <div className="flex-1 flex flex-col justify-between py-0.5">
+                        <div>
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <h3 className="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition duration-150 leading-snug">
+                              {p.name}
+                            </h3>
+                          </div>
+                          {p.desc && (
+                            <p className="text-slate-500 text-[11px] leading-relaxed mt-1 line-clamp-2">
+                              {p.desc}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Interactive pricing & custom calculator controls */}
+                        <div className="flex items-end justify-between mt-2.5">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block font-light leading-none mb-0.5">سعر الوجبة</span>
+                            <span className="text-red-600 font-extrabold text-[15px] font-mono tracking-tight">
+                              {formattedPrice} <span className="text-[10px] font-bold font-sans">ل.س</span>
+                            </span>
+                          </div>
+
+                          {/* Refined arithmetic increments */}
+                          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-full border border-slate-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
+                            <button
+                              onClick={() => updateQty(p.name, -1)}
+                              className={`w-7.5 h-7.5 rounded-full font-bold flex items-center justify-center cursor-pointer transition ${
+                                currentQty > 0 
+                                  ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' 
+                                  : 'bg-transparent text-slate-300 pointer-events-none'
+                              }`}
+                              title="إزالة وجبة"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            
+                            <span className={`font-mono text-xs font-bold text-center min-w-4 ${currentQty > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
+                              {currentQty}
+                            </span>
+                            
+                            <button
+                              onClick={() => {
+                                updateQty(p.name, 1);
+                              }}
+                              className="w-7.5 h-7.5 rounded-full bg-red-650 hover:bg-red-700 text-white font-bold flex items-center justify-center cursor-pointer shadow-sm shadow-red-200 active:scale-95 transition-all"
+                              title="إضافة وجبة"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+
+              {filteredProducts.length === 0 && (
+                <div className="col-span-full py-16 px-4 bg-white rounded-3xl border border-slate-100 text-center flex flex-col items-center">
+                  <span className="text-4xl mb-3">🥪</span>
+                  <h3 className="font-bold text-slate-800 mb-1">لم نجد ما تبحث عنه بالمنيو!</h3>
+                  <p className="text-slate-400 text-xs">جرب البحث بكلمة أخرى مثل 'شاورما' أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
+                  <button 
+                    onClick={() => { setSearchQuery(""); setCurrentCat("الكل"); }}
+                    className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition"
+                  >
+                    عرض كل الوجبات
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Real-time Order & Calculations Sidebar Voucher */}
+        <div className="w-full md:w-85 lg:w-96 flex-shrink-0">
+          <div className="bg-white rounded-2xl border border-slate-150 p-4.5 shadow-sm sticky top-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
+              <h2 className="font-bold text-[16px] text-slate-800 flex items-center gap-2">
+                <ShoppingBag className="w-4.5 h-4.5 text-red-600" />
+                <span>فاتورة طلباتك التفاعلية</span>
+              </h2>
+              {cartStatistics.totalItems > 0 && (
+                <button 
+                  onClick={clearCart}
+                  className="text-[11px] text-slate-400 hover:text-red-600 font-semibold flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>تصفير الفاتورة</span>
+                </button>
+              )}
+            </div>
+
+            {cartStatistics.itemsList.length === 0 ? (
+              <div className="py-8 text-center flex flex-col items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center text-slate-330 mb-3 border border-dashed border-slate-200">
+                  <ShoppingBag className="w-6 h-6 text-slate-350" />
+                </div>
+                <p className="text-slate-600 font-medium text-xs">سلتك لا تزال فارغة حاليًا</p>
+                <p className="text-slate-400 text-[10px] mt-1 max-w-[180px] mx-auto leading-relaxed">
+                  تصفح المنيو بالأعلى وأضف وجباتك المفضلة وسنقوم بتجهيز الحساب فوراً تلقائياً!
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Scrollable list of picked items within invoice */}
+                <div className="space-y-3 max-h-56 overflow-y-auto pl-1">
+                  {cartStatistics.itemsList.map(({ product, qty, itemSum }) => (
+                    <div key={product.id} className="flex justify-between items-start gap-2 bg-slate-50/50 p-2 rounded-xl border border-slate-100 text-xs">
+                      <div className="flex-1">
+                        <p className="font-bold text-slate-800 leading-snug">{product.name}</p>
+                        <p className="text-slate-500 font-mono text-[10px] mt-0.5">
+                          {qty} × {product.price.toLocaleString()} ل.س
+                        </p>
+                      </div>
+                      <div className="text-left font-mono font-bold text-slate-900 pr-1 select-none">
+                        {itemSum.toLocaleString()} ل.س
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Arithmetic Breakdown */}
+                <div className="border-t border-slate-100 pt-3.5 mt-4 space-y-2">
+                  <div className="flex justify-between text-xs text-slate-500 font-medium">
+                    <span>عدد الوجبات الكلية:</span>
+                    <span className="font-mono text-slate-800 font-bold">{cartStatistics.totalItems}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-500 font-medium">
+                    <span>تكلفة التوصيل (صحنايا):</span>
+                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold">مجاني بالكامل 🤩</span>
+                      <span>0 ل.س</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-900 font-extrabold border-t border-dashed border-slate-200 pt-3.5 mt-2">
+                    <span className="text-slate-800">الحساب الإجمالي الكلي:</span>
+                    <span className="font-mono text-red-600 text-base">
+                      {cartStatistics.totalPrice.toLocaleString()} ل.س
+                    </span>
+                  </div>
+                </div>
+
+                {/* Checkout Fields (Integrated neatly inside the invoice form) */}
+                <form onSubmit={handleSendOrder} className="border-t border-slate-100 pt-4 mt-4 space-y-3">
+                  <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>تفاصيل توصيل الزبون:</span>
+                  </h3>
+                  
+                  <div>
+                    <label htmlFor="client-name" className="sr-only">اسم الزبون</label>
+                    <input 
+                      type="text" 
+                      id="client-name"
+                      required
+                      value={orderDetails.name}
+                      onChange={handleInputChange}
+                      placeholder="👤 اسم الزبون الكامل..."
+                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="client-address" className="sr-only">العنوان بالتفصيل</label>
+                    <input 
+                      type="text" 
+                      id="client-address"
+                      required
+                      value={orderDetails.address}
+                      onChange={handleInputChange}
+                      placeholder="📍 العنوان بالتفصيل (الحي، الشارع، علامة مميزة)..."
+                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="client-phone" className="sr-only">رقم الهاتف للاتصال</label>
+                    <input 
+                      type="tel" 
+                      id="client-phone"
+                      value={orderDetails.phone}
+                      onChange={handleInputChange}
+                      placeholder="📞 رقم الهاتف للاتصال (اختياري)..."
+                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="client-notes" className="sr-only">أية ملاحظات إضافية</label>
+                    <textarea 
+                      id="client-notes"
+                      value={orderDetails.notes}
+                      onChange={handleInputChange}
+                      rows={2}
+                      placeholder="📝 أي ملاحظات للطلب؟ مثال: بدون مايونيز، كريم ثوم إضافي..."
+                      className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full mt-3 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 cursor-pointer relative overflow-hidden"
+                  >
+                    <span>🚀 إرسال الفاتورة عبر الواتساب</span>
+                    {orderSent && (
+                      <span className="absolute inset-0 bg-emerald-600 flex items-center justify-center gap-1.5 transition-all">
+                        <Check className="w-5 h-5 animate-bounce" />
+                        <span>تم تجهيز الطلب للواتساب!</span>
+                      </span>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Mobile Sticky Quick Basket Panel - Appears when screen is small and item is selected */}
+      <AnimatePresence>
+        {cartStatistics.totalItems > 0 && !showCartDrawer && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            className="md:hidden fixed bottom-4 inset-x-4 bg-slate-900/95 backdrop-blur-lg text-white p-3.5 rounded-2xl shadow-xl border border-slate-800 z-40 flex items-center justify-between pointer-events-auto"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="relative p-2 bg-red-600 rounded-xl">
+                <ShoppingBag className="w-5 h-5 text-white" />
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-slate-900 font-mono font-extrabold text-[10px] w-4.5 h-4.5 rounded-full flex items-center justify-center">
+                  {cartStatistics.totalItems}
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-light leading-none">مجموع طلباتك</p>
+                <p className="font-mono font-bold text-sm tracking-tight mt-0.5">
+                  {cartStatistics.totalPrice.toLocaleString()} <span className="text-[10px] font-sans text-red-400">ل.س</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={scrollToCheckout}
+              className="bg-red-650 hover:bg-red-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition shadow-sm cursor-pointer"
+            >
+              عرض الفاتورة وإرسال الطلب
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Detailed Cart Modal for Mobile View */}
+      <AnimatePresence>
+        {showCartDrawer && (
+          <div className="fixed inset-0 z-50 md:hidden bg-slate-900/50 backdrop-blur-sm flex items-end">
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="bg-white w-full rounded-t-3xl max-h-[85vh] overflow-y-auto p-4 flex flex-col border-t border-slate-200"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="font-bold text-base text-slate-900">سلة طلباتك الشهية</h2>
+                  <span className="bg-red-100 text-red-700 text-xs font-extrabold font-mono px-2 py-0.5 rounded-full">
+                    {cartStatistics.totalItems} وجبات
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setShowCartDrawer(false)}
+                  className="p-1 px-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full text-xs font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>إغلاق الملحق</span>
+                </button>
+              </div>
+
+              {cartStatistics.itemsList.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-slate-500 text-sm">سلتك فارغة، أضف بعض الوجبات وسحب الفاتورة!</p>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col space-y-4">
+                  {/* Voucher Itemized List */}
+                  <div className="space-y-2.5 max-h-48 overflow-y-auto pl-1">
+                    {cartStatistics.itemsList.map(({ product, qty, itemSum }) => (
+                      <div key={product.id} className="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
+                        <div className="flex-1">
+                          <p className="font-bold text-slate-800">{product.name}</p>
+                          <p className="text-slate-500 font-mono mt-0.5">
+                            {qty} × {product.price.toLocaleString()} ل.س
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Sync buttons inside cart modal */}
+                          <button onClick={() => updateQty(product.name, -1)} className="w-6 h-6 rounded-full bg-white hover:bg-red-50 text-slate-600 flex items-center justify-center border border-slate-200 cursor-pointer">
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-mono font-bold text-slate-800 text-center min-w-4">{qty}</span>
+                          <button onClick={() => updateQty(product.name, 1)} className="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="text-left font-mono font-bold text-slate-900 pr-2 select-none min-w-[70px]">
+                          {itemSum.toLocaleString()} ل.س
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calculations Details */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-150 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>تكلفة وجبات الطعام:</span>
+                      <span className="font-mono font-bold text-slate-900">{cartStatistics.totalPrice.toLocaleString()} ل.س</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>خدمة التوصيل بصحنايا:</span>
+                      <span className="text-emerald-705 font-bold">مجاني بالكامل 🎉</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-bold text-sm border-t border-slate-200/60 pt-2 mt-1">
+                      <span>الحساب الإجمالي الكلي:</span>
+                      <span className="font-mono text-red-600 text-base">{cartStatistics.totalPrice.toLocaleString()} ل.س</span>
+                    </div>
+                  </div>
+
+                  {/* Customer Checkout Form inside drawer */}
+                  <div ref={bottomFormRef} className="space-y-3 pt-2">
+                    <h3 className="text-xs font-bold text-slate-705 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-red-500" />
+                      <span>معلومات الزبون لمندوب التوصيل:</span>
+                    </h3>
+                    
+                    <input 
+                      type="text" 
+                      id="mobile-client-name"
+                      required
+                      value={orderDetails.name}
+                      onChange={(e) => setOrderDetails(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="👤 اسمك الكريم بالكامل..."
+                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+                    />
+
+                    <input 
+                      type="text" 
+                      id="mobile-client-address"
+                      required
+                      value={orderDetails.address}
+                      onChange={(e) => setOrderDetails(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="📍 العنوان بدقة (الحارة، البناية، علامة قريبة)..."
+                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+                    />
+
+                    <input 
+                      type="tel" 
+                      id="mobile-client-phone"
+                      value={orderDetails.phone}
+                      onChange={(e) => setOrderDetails(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="📞 رقم الموبايل للاتصال بك (اختياري)..."
+                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+                    />
+
+                    <textarea 
+                      id="mobile-client-notes"
+                      value={orderDetails.notes}
+                      onChange={(e) => setOrderDetails(prev => ({ ...prev, notes: e.target.value }))}
+                      rows={2}
+                      placeholder="📝 هل لديك أي ملحوظات؟ (زيادة بصل، تخفيف توم، الخ...)"
+                      className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none bg-slate-50/20"
+                    />
+
+                    <button
+                      onClick={handleSendOrder}
+                      className="w-full bg-emerald-650 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-100 transition active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-3"
+                    >
+                      <span>🚀 تثبيت وإرسال الطلب للواتساب</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modern Compact Responsive Footer branding details */}
+      <footer className="mt-auto py-8 bg-slate-950 text-center text-slate-500 border-t border-slate-900 px-4 text-xs">
+        <p className="font-semibold text-slate-400">🍔 مطعم Friends صحنايا</p>
+        <p className="mt-1 font-light text-[11px] text-slate-600 leading-relaxed max-w-md mx-auto">
+          المنيو الإلكتروني التفاعلي للطلب الفوري. نخدم أهالي صحنايا الحبيبة بكل فخر. نوصل طلبكم ساخناً مقرمشاً بدقة حسابات 100%.
+        </p>
+        <div className="flex justify-center items-center gap-1.5 text-[9px] text-slate-700 font-mono mt-4">
+          <span>FRIENDS_V2_RESILIENT</span>
+          <span>•</span>
+          <span>STABLE_ARITHMETIC_PRECISION</span>
+        </div>
+      </footer>
+
+    </div>
+  );
+}
