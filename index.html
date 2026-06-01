@@ -27,7 +27,7 @@
     }
   </script>
 
-  <!-- Google Font Cairo for elegant Arabic Typography -->
+  <!-- Google Font Cairo for Arabic Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -58,7 +58,6 @@
       animation: fadeIn 0.3s ease-out forwards;
     }
     
-    /* Extra spacing adjustments */
     body {
       background-color: #f8fafc;
       font-family: 'Cairo', sans-serif;
@@ -115,7 +114,12 @@
       <div class="flex justify-center flex-wrap gap-2.5 mt-2">
         <a href="tel:0116712121" class="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition text-xs font-semibold flex items-center gap-1.5 border border-white/10 hover:scale-[1.02]">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-          <span>اتصل بنا: 0116712121</span>
+          <span>الهاتف الأرضي: 0116712121</span>
+        </a>
+
+        <a href="https://wa.me/963955929797" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-full bg-emerald-600/90 hover:bg-emerald-600 transition text-xs font-semibold flex items-center gap-1.5 border border-emerald-500/30 hover:scale-[1.02] shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.004 0C5.378 0 .004 5.372.004 12c0 2.112.551 4.167 1.596 5.975L.055 24l6.19-1.623c1.745.952 3.71 1.455 5.753 1.455 6.626 0 12-5.374 12-12s-5.372-12-12-12zm6.216 17.062c-.263.376-1.53 1.53-2.095 1.595-.563.064-1.127.127-3.125-.668-2.518-1-4.14-3.565-4.266-3.733-.127-.167-.936-1.246-.936-2.38 0-1.134.593-1.684.805-1.905.213-.223.504-.286.716-.286.213 0 .425-.01.616.004.197.014.446-.073.69-.661.264-.637.904-2.195.983-2.353.079-.158.132-.344.027-.557-.107-.213-.48-.68-.72-.977-.243-.298-.49-.611-.702-.611-.212 0-.424.01-.615.01-.192 0-.616.073-.913.396-.298.324-1.137 1.11-1.137 2.709s1.157 3.138 1.316 3.35c.159.213 2.278 3.479 5.519 4.88.77.333 1.373.533 1.84.681.776.246 1.482.211 2.04.127.622-.093 1.913-.782 2.183-1.498.27-.717.27-1.33.19-1.458-.08-.128-.293-.207-.611-.366z"/></svg>
+          <span>واتساب: 0955929797</span>
         </a>
         
         <div class="px-3.5 py-1.5 rounded-full bg-red-900/50 text-xs flex items-center gap-1.5 border border-red-800/30">
@@ -155,8 +159,7 @@
         <!-- Categories Slider Box -->
         <div class="relative">
           <div id="category-scroller" class="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 hide-scrollbar scroll-smooth">
-            <!-- Dynamically populated categories -->
-            <div class="px-4 py-8 text-center text-xs text-slate-400">جاري الترتيب...</div>
+            <div class="px-4 py-8 text-center text-xs text-slate-404">جاري الترتيب...</div>
           </div>
         </div>
       </div>
@@ -175,7 +178,7 @@
       <div id="empty-state" class="hidden py-16 px-4 bg-white rounded-3xl border border-slate-100 text-center flex flex-col items-center">
         <span class="text-4xl mb-3">🥪</span>
         <h3 class="font-bold text-slate-800 mb-1">لم نجد ما تبحث عنه بالمنيو!</h3>
-        <p class="text-slate-500 text-xs">جرب البحث بكلمة أخرى مثل 'شاورما' أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
+        <p class="text-slate-500 text-xs">جرب البحث بكلمة أخرى أو اضغط على 'الكل' للاطلاع على وجباتنا.</p>
         <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition cursor-pointer select-none">
           عرض كل الوجبات
         </button>
@@ -247,7 +250,7 @@
                 id="form-name" 
                 required
                 placeholder="👤 اسم الزبون الكامل..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -257,7 +260,7 @@
                 id="form-address" 
                 required
                 placeholder="📍 العنوان بدقة (الشارع، معالم قريبة)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -266,7 +269,7 @@
                 type="tel" 
                 id="form-phone" 
                 placeholder="📞 رقم الهاتف للاتصال بك (اختياري)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition"
               >
             </div>
 
@@ -275,14 +278,13 @@
                 id="form-notes" 
                 rows="2"
                 placeholder="📝 أي ملاحظات؟ (إضافة ثوم، بدون بصل، الخ)..." 
-                class="w-full text-xs p-2.5 rounded-lg border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
+                class="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition resize-none"
               ></textarea>
             </div>
 
             <button 
               type="submit" 
-              className="relative overflow-hidden cursor-pointer"
-              class="w-full bg-red-650 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 select-none"
+              class="w-full bg-red-650 hover:bg-red-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-red-100 flex items-center justify-center gap-2 select-none cursor-pointer"
             >
               <span id="btn-submit-text">🚀 إرسال الفاتورة عبر الواتساب</span>
             </button>
@@ -359,7 +361,7 @@
             id="mob-form-name" 
             required 
             placeholder="👤 اسمك الكريم بالكامل..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <input 
@@ -367,21 +369,21 @@
             id="mob-form-address" 
             required 
             placeholder="📍 العنوان بدقة (الحارة، البناية، علامة قريبة)..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <input 
             type="tel" 
             id="mob-form-phone" 
             placeholder="📞 رقم الموبايل للاتصال بك (اختياري)..." 
-            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
+            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20"
           >
 
           <textarea 
             id="mob-form-notes" 
             rows="2" 
             placeholder="📝 هل لديك أي ملحوظات؟ (زيادة بصل، تخفيف توم، الخ...)" 
-            class="w-full text-xs p-3 rounded-xl border border-slate-205 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20 resize-none"
+            class="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-red-500 focus:ring-1 focus:ring-red-100 outline-none transition bg-slate-50/20 resize-none"
           ></textarea>
 
           <button 
@@ -409,7 +411,6 @@
     </div>
   </footer>
 
-  <!-- Code Logic Block containing the spreadsheet integration, custom calculation fixes, and UI interaction -->
   <script>
     // Configuration Settings
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQA1N5o-6wYiF-PzhHpuPowJNnAl_TATDAsdnV7weblohCpr8i9xnxbVsvm5EsO-HWo5dG748KuRgil/pub?gid=0&single=true&output=csv";
@@ -501,7 +502,7 @@
 
     // Reactive State Engine
     let products = [];
-    let cart = {}; // key: product name, value: count
+    let cart = {}; // key: product name::category, value: count
     let currentCategory = "الكل";
     let searchQuery = "";
     let customerDetails = { name: "", address: "", phone: "", notes: "" };
@@ -545,7 +546,26 @@
       // Load saved customer data and cart
       const savedCart = localStorage.getItem('friends_cart');
       if (savedCart) {
-        try { cart = JSON.parse(savedCart); } catch(e) { cart = {}; }
+        try { 
+          const parsed = JSON.parse(savedCart);
+          cart = {};
+          // Migrate old cart entries to new key format if they don't have '::'
+          Object.entries(parsed).forEach(([key, qty]) => {
+            if (qty > 0) {
+              if (key.includes('::')) {
+                cart[key] = qty;
+              } else {
+                // Find and migrate
+                cart[key + "::" + "ساندويش"] = qty; // default to sandwich
+              }
+            }
+          });
+        } catch(e) { cart = {}; }
+      }
+      
+      const cachedTime = localStorage.getItem('friends_menu_last_fetch');
+      if (cachedTime) {
+        updateLastFetchTime(cachedTime);
       }
       
       const savedDetails = localStorage.getItem('friends_order_details');
@@ -609,10 +629,14 @@
         // Skip header
         const dataRows = rows.slice(1);
         const mappedList = dataRows.map((cols, idx) => {
-          // Robust Arithmetic Check matching original fixes
           const rawPrice = cols[1] || "";
           const cleanPrice = rawPrice.replace(/[^\d.]/g, '').trim();
-          const parsedPrice = parseFloat(cleanPrice) || 0;
+          let parsedPrice = parseFloat(cleanPrice) || 0;
+
+          // Self-healing factor: Convert Google Sheet shorthand price (e.g. 470) to full SYP (e.g. 47000)
+          if (parsedPrice < 5000) {
+            parsedPrice = parsedPrice * 100;
+          }
 
           return {
             id: `sheet-${idx}`,
@@ -765,7 +789,6 @@
       const grid = document.getElementById('products-grid');
       const emptyState = document.getElementById('empty-state');
       
-      // Filter products
       const filtered = products.filter(p => {
         const matchCat = (currentCategory === "الكل" || p.cat === currentCategory);
         const search = searchQuery.toLowerCase().trim();
@@ -788,15 +811,14 @@
 
       let html = "";
       filtered.forEach(p => {
-        const currentQty = cart[p.name] || 0;
+        const currentQty = cart[p.name + "::" + p.cat] || 0;
         const formattedPrice = p.price.toLocaleString();
         
-        // Render single card
         html += `
           <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-200 transition duration-200 animate-fadeIn group relative">
             
             <!-- Food Thumbnail Image -->
-            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-105 flex-shrink-0 border border-slate-100/60 shadow-inner">
+            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-100 flex-shrink-0 border border-slate-100/60 shadow-inner">
               ${p.img ? `
                 <img 
                   src="${p.img}" 
@@ -807,18 +829,18 @@
                 />
               ` : ''}
               
-              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50 ${p.img ? 'hidden' : 'flex'}" style="display: ${p.img ? 'none' : 'flex'}">
+              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50" style="display: ${p.img ? 'none' : 'flex'}">
                 <svg class="w-7 h-7 mb-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 <span class="text-[9px] font-medium text-red-400">Friends 🍔</span>
               </div>
 
-              <!-- Inline Badge Badge -->
+              <!-- Inline Badge Category -->
               <div class="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
                 ${p.cat}
               </div>
             </div>
 
-            <!-- Copywriting and Adders -->
+            <!-- Content -->
             <div class="flex-1 flex flex-col justify-between py-0.5">
               <div>
                 <h3 class="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition leading-snug">
@@ -843,8 +865,8 @@
                 <!-- Circular counter increments -->
                 <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-full border border-slate-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] select-none">
                   <button 
-                    onclick="updateCartQty('${p.name}', -1)"
-                    class="w-7.5 h-7.5 rounded-full font-bold flex items-center justify-center cursor-pointer transition w-7 h-7 ${currentQty > 0 ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' : 'bg-transparent text-slate-300 pointer-events-none'}"
+                    onclick="updateCartQty('${p.name}', '${p.cat}', -1)"
+                    class="w-7 h-7 rounded-full font-bold flex items-center justify-center cursor-pointer transition ${currentQty > 0 ? 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200' : 'bg-transparent text-slate-300 pointer-events-none'}"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                   </button>
@@ -854,7 +876,7 @@
                   </span>
                   
                   <button 
-                    onclick="updateCartQty('${p.name}', 1)"
+                    onclick="updateCartQty('${p.name}', '${p.cat}', 1)"
                     class="w-7 h-7 rounded-full bg-red-650 hover:bg-red-700 text-white font-bold flex items-center justify-center cursor-pointer shadow-sm shadow-red-200 active:scale-95 transition"
                   >
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -895,15 +917,16 @@
       refreshUILayout();
     }
 
-    // Update Basket Increment / Decrement Quantities
-    function updateCartQty(name, change) {
-      const current = cart[name] || 0;
+    // Update Basket Quantity with specific Name and Category
+    function updateCartQty(name, cat, change) {
+      const key = name + "::" + cat;
+      const current = cart[key] || 0;
       const next = Math.max(0, current + change);
       
       if (next === 0) {
-        delete cart[name];
+        delete cart[key];
       } else {
-        cart[name] = next;
+        cart[key] = next;
       }
 
       // Sync and render
@@ -919,23 +942,33 @@
       }
     }
 
-    // Calculations calculations statistics
+    // Statistics Calculations
     function getCartStatistics() {
       let totalPrice = 0;
       let totalItems = 0;
       const itemsList = [];
 
-      Object.entries(cart).forEach(([name, qty]) => {
-        const matched = products.find(p => p.name === name);
-        if (matched && qty > 0) {
-          const itemSum = matched.price * qty;
-          totalPrice += itemSum;
-          totalItems += qty;
-          itemsList.push({
-            product: matched,
-            qty,
-            itemSum
-          });
+      Object.entries(cart).forEach(([key, qty]) => {
+        if (qty > 0) {
+          const parts = key.split("::");
+          const name = parts[0];
+          const cat = parts[1] || "";
+          
+          let matched = products.find(p => p.name === name && p.cat === cat);
+          if (!matched) {
+            matched = products.find(p => p.name === name);
+          }
+          
+          if (matched) {
+            const itemSum = matched.price * qty;
+            totalPrice += itemSum;
+            totalItems += qty;
+            itemsList.push({
+              product: matched,
+              qty,
+              itemSum
+            });
+          }
         }
       });
 
@@ -972,18 +1005,18 @@
         html += `
           <div class="flex justify-between items-start gap-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 text-xs">
             <div class="flex-1">
-              <p class="font-bold text-slate-800 leading-snug">${item.product.name}</p>
+              <p class="font-bold text-slate-800 leading-snug">${item.product.name} <span class="text-red-650 text-[10px] font-semibold">(${item.product.cat})</span></p>
               <p class="text-slate-500 font-mono text-[10px] mt-0.5">
                 ${item.qty} × ${item.product.price.toLocaleString()} ل.س
               </p>
             </div>
             
             <div class="flex items-center gap-1.5 select-none pr-1">
-              <button onclick="updateCartQty('${item.product.name}', -1)" class="w-5 h-5 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
+              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', -1)" class="w-5 h-5 rounded-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
               </button>
               <span class="font-mono font-bold text-slate-800 min-w-[12px] text-center">${item.qty}</span>
-              <button onclick="updateCartQty('${item.product.name}', 1)" class="w-5 h-5 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
+              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', 1)" class="w-5 h-5 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer select-none">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               </button>
             </div>
@@ -1022,7 +1055,6 @@
       overlay.classList.remove('hidden');
       overlay.classList.add('flex');
       
-      // Render details
       const stats = getCartStatistics();
       document.getElementById('mobile-drawer-count-badge').innerText = `${stats.totalItems} وجبات`;
       document.getElementById('mobile-drawer-items-cost').innerText = `${stats.totalPrice.toLocaleString()} ل.س`;
@@ -1034,18 +1066,18 @@
         html += `
           <div class="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
             <div class="flex-1">
-              <p class="font-bold text-slate-800">${item.product.name}</p>
+              <p class="font-bold text-slate-800">${item.product.name} <span class="text-red-650 text-[10px] font-semibold">(${item.product.cat})</span></p>
               <p class="text-slate-500 font-mono mt-0.5">
                 ${item.qty} × ${item.product.price.toLocaleString()} ل.س
               </p>
             </div>
             
             <div class="flex items-center gap-2 select-none">
-              <button onclick="updateCartQty('${item.product.name}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', -1)" class="w-6 h-6 rounded-full bg-white hover:bg-slate-100 text-slate-505 border border-slate-200 flex items-center justify-center cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
               </button>
               <span class="font-mono font-bold text-slate-800 min-w-[14px] text-center">${item.qty}</span>
-              <button onclick="updateCartQty('${item.product.name}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
+              <button onclick="updateCartQty('${item.product.name}', '${item.product.cat}', 1)" class="w-6 h-6 rounded-full bg-red-650 text-white flex items-center justify-center cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               </button>
             </div>
@@ -1058,7 +1090,7 @@
       });
       drawerItems.innerHTML = html;
 
-      // Animate sliding up
+      // Slide up
       setTimeout(() => {
         drawer.classList.remove('translate-y-full');
         drawer.classList.add('translate-y-0');
@@ -1078,7 +1110,7 @@
       }, 250);
     }
 
-    // Submit and construct perfect responsive WhatsApp Redirect links
+    // Submit and redirect to WhatsApp
     function handleSendOrder(event, isMobileDrawer = false) {
       event.preventDefault();
       
@@ -1105,7 +1137,7 @@
         return;
       }
       if (!address) {
-        alert("الرجاء إدخال تفاصيل العنوان (مثال: الشارع، بجوار المسجد، الطابق) لتسهيل التوصيل!");
+        alert("الرجاء إدخال تفاصيل العنوان لتسهيل التوصيل!");
         return;
       }
       if (stats.itemsList.length === 0) {
@@ -1113,7 +1145,7 @@
         return;
       }
 
-      // Build perfect responsive receipt text
+      // Build recipe SMS-style text
       let msg = `*طلب جديد من المنيو الإلكتروني لمطعم فريندز 🍔📱*\n`;
       msg += `──────────────────────\n`;
       msg += `👤 *الزبون:* ${name}\n`;
@@ -1128,7 +1160,7 @@
       msg += `🛒 *الطلبات المحددة:* \n\n`;
 
       stats.itemsList.forEach((item, index) => {
-        msg += `${index + 1}. *${item.product.name}*\n`;
+        msg += `${index + 1}. *${item.product.name} (${item.product.cat})*\n`;
         msg += `   الكمية: ${item.qty} × ${item.product.price.toLocaleString()} ل.س\n`;
         msg += `   المجموع: *${item.itemSum.toLocaleString()} ل.س*\n\n`;
       });
@@ -1138,11 +1170,11 @@
       msg += `──────────────────────\n`;
       msg += `🍔 *شكرًا لاختياركم مطعم Friends! سنصنع طلبكم بأفضل المكونات ونؤكده معكم بكل سرور.*`;
 
-      // Redirect link
+      // Redirect link to WhatsApp
       const encoded = encodeURIComponent(msg);
       const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
       
-      // Update Button State to show Success trigger
+      // Update Button state
       const submitBtn = isMobileDrawer 
         ? document.querySelector('#mobile-drawer-form button[type="submit"]')
         : document.querySelector('#checkout-form button[type="submit"]');
@@ -1161,7 +1193,6 @@
         submitBtn.style.backgroundColor = ""; 
       }, 3000);
 
-      // Open tab securely
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   </script>
