@@ -541,6 +541,7 @@
     ];
 
      // Reactive State Engine
+     const failedImages = new Set();
      let products = [];
      let cart = {}; // key: product name, value: count
      let currentCategory = "الكل";
@@ -680,7 +681,12 @@
  
      function escapeJSString(str) {
        if (!str) return "";
-       return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+       return str.replace(/\\/g, '\\\\')
+                 .replace(/'/g, "\\'")
+                 .replace(/"/g, '&quot;')
+                 .replace(/`/g, '\\`')
+                 .replace(/\r/g, '')
+                 .replace(/\n/g, '\\n');
      }
 
     // Standard stable CSV parser matching App.tsx perfectly
@@ -717,7 +723,7 @@
       return lines;
     }
 
-    // Initialize Page
+     // Initialize Page
     document.addEventListener("DOMContentLoaded", () => {
       // Load saved customer data and cart
       const savedCart = localStorage.getItem('friends_cart');
@@ -748,16 +754,20 @@
       if (savedDetails) {
         try {
           customerDetails = JSON.parse(savedDetails);
-          // Apply values to standard fields
-          document.getElementById('form-name').value = customerDetails.name || "";
-          document.getElementById('form-address').value = customerDetails.address || "";
-          document.getElementById('form-phone').value = customerDetails.phone || "";
-          document.getElementById('form-notes').value = customerDetails.notes || "";
+          // Apply values securely to standard and mobile elements
+          const applyValue = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val || "";
+          };
+          applyValue('form-name', customerDetails.name);
+          applyValue('form-address', customerDetails.address);
+          applyValue('form-phone', customerDetails.phone);
+          applyValue('form-notes', customerDetails.notes);
           
-          document.getElementById('mob-form-name').value = customerDetails.name || "";
-          document.getElementById('mob-form-address').value = customerDetails.address || "";
-          document.getElementById('mob-form-phone').value = customerDetails.phone || "";
-          document.getElementById('mob-form-notes').value = customerDetails.notes || "";
+          applyValue('mob-form-name', customerDetails.name);
+          applyValue('mob-form-address', customerDetails.address);
+          applyValue('mob-form-phone', customerDetails.phone);
+          applyValue('mob-form-notes', customerDetails.notes);
         } catch(e) {}
       }
 
@@ -777,16 +787,20 @@
         if (desktopInput) {
           desktopInput.addEventListener('input', (e) => {
             customerDetails[attr] = e.target.value;
-            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
             if (mobileInput) mobileInput.value = e.target.value;
+          });
+          desktopInput.addEventListener('change', () => {
+            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
           });
         }
         
         if (mobileInput) {
           mobileInput.addEventListener('input', (e) => {
             customerDetails[attr] = e.target.value;
-            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
             if (desktopInput) desktopInput.value = e.target.value;
+          });
+          mobileInput.addEventListener('change', () => {
+            localStorage.setItem('friends_order_details', JSON.stringify(customerDetails));
           });
         }
       });
@@ -857,7 +871,8 @@
         }
       } finally {
         setLoadingUI(false);
-        refreshUILayout();
+        renderCategories();
+        refreshUILayout(true);
       }
     }
 
@@ -911,9 +926,8 @@
     }
 
     // Refresh general layouts
-    function refreshUILayout() {
-      renderCategories();
-      renderProducts();
+    function refreshUILayout(animateProducts = true) {
+      renderProducts(animateProducts);
       renderCartInvoice();
       renderMobileStickyDock();
       renderMobileDrawer();
@@ -959,11 +973,12 @@
 
     function selectCategory(cat) {
       currentCategory = cat;
-      refreshUILayout();
+      renderCategories();
+      refreshUILayout(true);
     }
 
     // Render Filtered Food Menu
-    function renderProducts() {
+    function renderProducts(animate = true) {
       const grid = document.getElementById('products-grid');
       const emptyState = document.getElementById('empty-state');
       
@@ -994,36 +1009,38 @@
         const formattedPrice = p.price.toLocaleString();
         const safeName = escapeJSString(p.name);
         const safeCat = escapeJSString(p.cat);
+        const hasFailed = p.img ? failedImages.has(p.img) : true;
+        const animationClass = animate ? "animate-fadeIn" : "";
         
         // Render single card
         html += `
-          <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-200 transition duration-200 animate-fadeIn group relative">
+          <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3.5 hover:shadow-md hover:border-slate-200 transition duration-200 ${animationClass} group relative">
             
             <!-- Food Thumbnail Image -->
-            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-105 flex-shrink-0 border border-slate-100/60 shadow-inner">
-              ${p.img ? `
+            <div class="w-24 h-24 sm:w-26 sm:h-26 rounded-xl overflow-hidden relative bg-slate-100 flex-shrink-0 border border-slate-100/60 shadow-inner">
+              ${(p.img && !hasFailed) ? `
                 <img 
                   src="${p.img}" 
                   alt="${p.name}" 
                   referrerpolicy="no-referrer"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  onerror="failedImages.add('${p.img}'); this.style.display='none'; this.nextElementSibling.style.display='flex';"
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ` : ''}
               
-              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50 ${p.img ? 'hidden' : 'flex'}" style="display: ${p.img ? 'none' : 'flex'}">
+              <div class="w-full h-full flex-col items-center justify-center text-red-500/80 bg-red-50/50 ${(p.img && !hasFailed) ? 'hidden' : 'flex'}" style="display: ${(p.img && !hasFailed) ? 'none' : 'flex'}">
                 <svg class="w-7 h-7 mb-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 <span class="text-[9px] font-medium text-red-400">Friends 🍔</span>
               </div>
-
-              <!-- Inline Badge Badge -->
-              <div class="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
-                ${p.cat}
-              </div>
-            </div>
-
-            <!-- Copywriting and Adders -->
-            <div class="flex-1 flex flex-col justify-between py-0.5">
+ 
+               <!-- Inline Badge Badge -->
+               <div class="absolute top-1 right-1 bg-red-650/90 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm">
+                 ${p.cat}
+               </div>
+             </div>
+ 
+             <!-- Copywriting and Adders -->
+             <div class="flex-1 flex flex-col justify-between py-0.5">
               <div>
                 <h3 class="font-bold text-[14px] text-slate-900 group-hover:text-red-700 transition leading-snug">
                   ${p.name}
@@ -1096,7 +1113,8 @@
     function resetFilters() {
       clearSearch();
       currentCategory = "الكل";
-      refreshUILayout();
+      renderCategories();
+      refreshUILayout(true);
     }
 
     // Update Basket Increment / Decrement Quantities
@@ -1113,7 +1131,7 @@
 
       // Sync and render
       localStorage.setItem('friends_cart', JSON.stringify(cart));
-      refreshUILayout();
+      refreshUILayout(false);
     }
 
     async function clearCart() {
@@ -1121,7 +1139,7 @@
       if (confirmed) {
         cart = {};
         localStorage.setItem('friends_cart', JSON.stringify(cart));
-        refreshUILayout();
+        refreshUILayout(false);
       }
     }
 
@@ -1137,9 +1155,9 @@
           const name = parts[0];
           const cat = parts[1] || "";
           
-          let matched = products.find(p => p.name === name && p.cat === cat);
+          let matched = products.find(p => p.name.trim() === name.trim() && p.cat.trim() === cat.trim());
           if (!matched) {
-            matched = products.find(p => p.name === name);
+            matched = products.find(p => p.name.trim() === name.trim());
           }
           
           if (matched) {
